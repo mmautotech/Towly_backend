@@ -71,7 +71,11 @@ const loginUser = async (req, res, next) => {
     sendSuccessResponse(
       res,
       "Login successful.",
-      { token, user_id: user._id },
+      {
+        token,
+        user_id: user._id,
+        role: user.role, // ✅ Included role in response
+      },
       200
     );
   } catch (error) {
