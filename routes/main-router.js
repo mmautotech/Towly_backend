@@ -8,12 +8,15 @@ const {
   forgotPassword,
 } = require("../controllers/auth-controller");
 
+const { createRideRequest } = require("../controllers/ride-request-controller");
+
 // Import validation schemas
 const {
   signupSchema,
   loginSchema,
   forgotPasswordSchema,
 } = require("../validators/auth-validator");
+const { rideRequestSchema } = require("../validators/ride-request-validator");
 
 // Import middleware for validating requests
 const validateRequest = require("../middlewares/validator-middleware");
@@ -44,6 +47,18 @@ router.post(
   "/auth/forgot-password",
   validateRequest(forgotPasswordSchema),
   forgotPassword
+);
+
+/* ========================== 🔄 Ride Request ========================== */
+/**
+ * @route   POST /auth/forgot-password
+ * @desc    Reset password using phone number
+ * @access  Public
+ */
+router.post(
+  "/put/ride-request",
+  validateRequest(rideRequestSchema),
+  createRideRequest
 );
 
 module.exports = router;

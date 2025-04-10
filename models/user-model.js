@@ -20,8 +20,8 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     match: [
-      /^\+92\d{10}$/,
-      "Invalid phone format. Expected format: +92XXXXXXXXXX.",
+      /^\+44\d{10}$/,
+      "Invalid phone format. Expected format: +44XXXXXXXXXX.",
     ],
   },
   password: {
