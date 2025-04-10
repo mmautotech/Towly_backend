@@ -11,11 +11,11 @@ const RideRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    pickupLocation: {
+    origin_location: {
       long: String,
       lat: String,
     },
-    destLocation: {
+    dest_location: {
       long: String,
       lat: String,
     },
@@ -27,12 +27,26 @@ const RideRequestSchema = new mongoose.Schema(
       Yearofmanufacture: Number,
       Wheels: String,
     },
+    status: {
+      type: String,
+      enum: [
+        "created",
+        "posted",
+        "accepted",
+        "to_origin",
+        "to_destination",
+        "cleared",
+        "cancelled",
+      ],
+      default: "created",
+    },
   },
   { timestamps: true }
 );
 
+// Auto-increment logic remains the same
 RideRequestSchema.pre("save", async function (next) {
-  if (!this.isNew || this.request_id) return next(); // Avoid overwriting if already set
+  if (!this.isNew || this.request_id) return next();
 
   try {
     const counter = await Counter.findOneAndUpdate(
@@ -44,7 +58,7 @@ RideRequestSchema.pre("save", async function (next) {
     this.request_id = counter.value;
     next();
   } catch (err) {
-    next(err); // Pass error to express error handler
+    next(err);
   }
 });
 
