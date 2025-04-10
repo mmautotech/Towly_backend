@@ -13,9 +13,8 @@ const {
   getActiveRideRequestsByUser,
   postRideRequest,
   getAllPostedRideRequests,
+  addOfferToRideRequest,
 } = require("../controllers/ride-request-controller");
-
-const { postOffer } = require("../controllers/offer-controller");
 
 // Validators
 const {
@@ -29,7 +28,6 @@ const {
   getCreatedByUserSchema,
 } = require("../validators/ride-request-validator");
 
-// Middleware
 const validateRequest = require("../middlewares/validator-middleware");
 
 /* ========== AUTH ROUTES ========== */
@@ -57,10 +55,7 @@ router.patch(
   validateRequest(getCreatedByUserSchema),
   postRideRequest
 );
-
 router.get("/ride-requests/posted", getAllPostedRideRequests);
-
-router.post("/ride-request/offer", postOffer);
+router.post("/ride-request/add-offer", addOfferToRideRequest);
 
 module.exports = router;
-// The above code is a router module for an Express.js application that handles authentication and ride request routes. It imports necessary modules, defines routes for user registration, login, password recovery, and ride request creation and retrieval, and applies validation middleware to ensure that incoming requests meet the expected schema before being processed by the corresponding controller functions.

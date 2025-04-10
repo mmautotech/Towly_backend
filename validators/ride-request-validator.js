@@ -16,7 +16,13 @@ const rideRequestSchema = z.object({
     Model: z.string(),
     colour: z.string(),
     Yearofmanufacture: z.number(),
-    Wheels: z.string(),
+    // wheels_category: is required field
+    Wheels_category: z.enum(["rolling", "stationary"]).default("rolling"),
+    vehicle_category: z
+      .enum(["donot-apply", "swb", "mwb", "lwb"])
+      .optional()
+      .default("donot-apply"),
+    loaded: z.enum(["donot-apply", "loaded"]).optional().default("donot-apply"),
   }),
   status: z
     .enum([
@@ -30,6 +36,7 @@ const rideRequestSchema = z.object({
     ])
     .optional()
     .default("created"),
+  offer: z.record(z.any()).optional().default({}),
 });
 
 const getCreatedByUserSchema = z.object({

@@ -25,7 +25,21 @@ const RideRequestSchema = new mongoose.Schema(
       Model: String,
       colour: String,
       Yearofmanufacture: Number,
-      Wheels: String,
+      Wheels_category: {
+        type: String,
+        enum: ["rolling", "stationary"],
+        default: "rolling",
+      },
+      vehicle_category: {
+        type: String,
+        enum: ["donot-apply", "swb", "mwb", "lwb"],
+        default: "donot-apply",
+      },
+      loaded: {
+        type: String,
+        enum: ["donot-apply", "loaded"],
+        default: "donot-apply",
+      },
     },
     status: {
       type: String,
@@ -39,6 +53,10 @@ const RideRequestSchema = new mongoose.Schema(
         "cancelled",
       ],
       default: "created",
+    },
+    offers: {
+      type: Object,
+      default: {},
     },
   },
   { timestamps: true }

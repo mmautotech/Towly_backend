@@ -8,6 +8,14 @@ const sendSuccessResponse = require("../utils/success-response");
  */
 const createRideRequest = async (req, res, next) => {
   try {
+    // Ensure default values in case frontend omits optional fields
+    req.body.offers ??= {};
+
+    const vehicle = req.body.vehicle_details;
+    vehicle.vehicle_category ??= "donot-apply";
+    vehicle.loaded ??= "donot-apply";
+    vehicle.Wheels_category ??= "rolling";
+
     const newRide = new RideRequest(req.body);
     await newRide.save();
 
@@ -18,7 +26,7 @@ const createRideRequest = async (req, res, next) => {
 };
 
 /**
- * @desc    Change status from 'created' to 'posted' using user_id and request_id
+ * @desc    Update ride request status to 'posted'
  * @route   PATCH /api/ride-request/post
  * @access  Public
  */
@@ -33,7 +41,7 @@ const postRideRequest = async (req, res, next) => {
     }
 
     const updatedRequest = await RideRequest.findOneAndUpdate(
-      { user_id, request_id, status: "created" }, // only update if it's currently "created"
+      { user_id, request_id, status: "created" },
       { status: "posted" },
       { new: true }
     );
@@ -53,7 +61,7 @@ const postRideRequest = async (req, res, next) => {
 };
 
 /**
- * @desc    Get all ride requests by user_id excluding 'cleared' and 'cancelled'
+ * @desc    Get active ride requests for a user (excluding cleared/cancelled)
  * @route   POST /api/fetch/ride-requests/active
  * @access  Public
  */
@@ -70,7 +78,9 @@ const getActiveRideRequestsByUser = async (req, res, next) => {
     const activeRequests = await RideRequest.find({
       user_id,
       status: { $nin: ["cleared", "cancelled"] },
-    }).select("request_id status pickupLocation destLocation vehicle_details");
+    }).select(
+      "request_id status origin_location dest_location vehicle_details"
+    );
 
     return sendSuccessResponse(
       res,
@@ -103,9 +113,41 @@ const getAllPostedRideRequests = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Truck driver adds/updates their offer to a ride request
+ * @route   POST /api/ride-request/add-offer
+ * @access  Public (should be protected later with role)
+ */
+const addOfferToRideRequest = async (req, res, next) => {
+  try {
+    const { request_id, truck_id, price } = req.body;
+
+    if (!request_id || !truck_id || !price) {
+      const error = new Error("request_id, truck_id and price are required.");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const ride = await RideRequest.findOne({ request_id });
+    if (!ride) {
+      const error = new Error("Ride request not found.");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    ride.offers[truck_id] = { price, timestamp: new Date() };
+    await ride.save();
+
+    return sendSuccessResponse(res, "Offer added successfully", ride.offers);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createRideRequest,
-  getActiveRideRequestsByUser,
   postRideRequest,
+  getActiveRideRequestsByUser,
   getAllPostedRideRequests,
+  addOfferToRideRequest,
 };
