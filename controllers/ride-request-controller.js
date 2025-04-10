@@ -8,13 +8,14 @@ const sendSuccessResponse = require("../utils/success-response");
  */
 const createRideRequest = async (req, res, next) => {
   try {
-    // Ensure default values in case frontend omits optional fields
-    req.body.offers ??= {};
+    // Ensure default fields if frontend omits them
+    req.body.offers ??= [];
 
-    const vehicle = req.body.vehicle_details;
+    const vehicle = req.body.vehicle_details ?? {};
     vehicle.vehicle_category ??= "donot-apply";
     vehicle.loaded ??= "donot-apply";
     vehicle.Wheels_category ??= "rolling";
+    req.body.vehicle_details = vehicle;
 
     const newRide = new RideRequest(req.body);
     await newRide.save();
@@ -35,9 +36,7 @@ const postRideRequest = async (req, res, next) => {
     const { user_id, request_id } = req.body;
 
     if (!user_id || !request_id) {
-      const error = new Error("user_id and request_id are required.");
-      error.statusCode = 400;
-      return next(error);
+      return next(new Error("user_id and request_id are required."));
     }
 
     const updatedRequest = await RideRequest.findOneAndUpdate(
@@ -47,11 +46,9 @@ const postRideRequest = async (req, res, next) => {
     );
 
     if (!updatedRequest) {
-      const error = new Error(
-        "No matching ride request found or status is not 'created'."
+      return next(
+        new Error("No matching ride request found or status is not 'created'.")
       );
-      error.statusCode = 404;
-      return next(error);
     }
 
     return sendSuccessResponse(res, "Ride request status updated to 'posted'.");
@@ -70,9 +67,7 @@ const getActiveRideRequestsByUser = async (req, res, next) => {
     const { user_id } = req.body;
 
     if (!user_id || typeof user_id !== "string") {
-      const error = new Error("Invalid or missing user_id.");
-      error.statusCode = 400;
-      return next(error);
+      return next(new Error("Invalid or missing user_id."));
     }
 
     const activeRequests = await RideRequest.find({
@@ -114,31 +109,38 @@ const getAllPostedRideRequests = async (req, res, next) => {
 };
 
 /**
- * @desc    Truck driver adds/updates their offer to a ride request
+ * @desc    Truck driver adds an offer to a ride request
  * @route   POST /api/ride-request/add-offer
- * @access  Public (should be protected later with role)
+ * @access  Public
  */
 const addOfferToRideRequest = async (req, res, next) => {
   try {
-    const { request_id, truck_id, price } = req.body;
+    const { request_id, truck_id, offered_price } = req.body;
 
-    if (!request_id || !truck_id || !price) {
-      const error = new Error("request_id, truck_id and price are required.");
-      error.statusCode = 400;
-      return next(error);
+    if (!request_id || !truck_id || !offered_price) {
+      return next(
+        new Error("request_id, truck_id, and offered_price are required.")
+      );
     }
 
-    const ride = await RideRequest.findOne({ request_id });
-    if (!ride) {
-      const error = new Error("Ride request not found.");
-      error.statusCode = 404;
-      return next(error);
+    const updated = await RideRequest.findOneAndUpdate(
+      { request_id },
+      {
+        $push: {
+          offers: {
+            truck_id,
+            offered_price,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return next(new Error("Ride request not found."));
     }
 
-    ride.offers[truck_id] = { price, timestamp: new Date() };
-    await ride.save();
-
-    return sendSuccessResponse(res, "Offer added successfully", ride.offers);
+    return sendSuccessResponse(res, "Offer added successfully.");
   } catch (error) {
     return next(error);
   }
@@ -146,8 +148,8 @@ const addOfferToRideRequest = async (req, res, next) => {
 
 module.exports = {
   createRideRequest,
-  postRideRequest,
   getActiveRideRequestsByUser,
+  postRideRequest,
   getAllPostedRideRequests,
   addOfferToRideRequest,
 };

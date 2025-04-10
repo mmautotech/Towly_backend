@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// Controllers
+// ======================= CONTROLLERS ======================= //
 const {
   registerUser,
   loginUser,
@@ -16,7 +16,7 @@ const {
   addOfferToRideRequest,
 } = require("../controllers/ride-request-controller");
 
-// Validators
+// ======================= VALIDATORS ======================= //
 const {
   signupSchema,
   loginSchema,
@@ -28,9 +28,10 @@ const {
   getCreatedByUserSchema,
 } = require("../validators/ride-request-validator");
 
+// ======================= MIDDLEWARE ======================= //
 const validateRequest = require("../middlewares/validator-middleware");
 
-/* ========== AUTH ROUTES ========== */
+// ======================= AUTH ROUTES ======================= //
 router.post("/auth/register", validateRequest(signupSchema), registerUser);
 router.post("/auth/login", validateRequest(loginSchema), loginUser);
 router.post(
@@ -39,23 +40,28 @@ router.post(
   forgotPassword
 );
 
-/* ========== RIDE REQUEST ROUTES ========== */
+// ======================= RIDE REQUEST ROUTES ======================= //
 router.post(
   "/create/ride-request",
   validateRequest(rideRequestSchema),
   createRideRequest
 );
+
 router.post(
   "/fetch/ride-requests/active",
   validateRequest(getCreatedByUserSchema),
   getActiveRideRequestsByUser
 );
+
 router.patch(
   "/ride-request/post",
   validateRequest(getCreatedByUserSchema),
   postRideRequest
 );
-router.get("/ride-requests/posted", getAllPostedRideRequests);
-router.post("/ride-request/add-offer", addOfferToRideRequest);
 
+router.get("/ride-requests/posted", getAllPostedRideRequests);
+
+router.post("/ride-request/add-offer", addOfferToRideRequest); // Expects: request_id, truck_id, offered_price
+
+// ======================= EXPORT ROUTER ======================= //
 module.exports = router;

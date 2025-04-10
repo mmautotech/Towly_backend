@@ -55,14 +55,32 @@ const RideRequestSchema = new mongoose.Schema(
       default: "created",
     },
     offers: {
-      type: Object,
-      default: {},
+      type: [
+        {
+          truck_id: { type: String },
+          offered_price: { type: Number },
+        },
+      ],
+      default: [],
     },
   },
   { timestamps: true }
 );
 
-// Auto-increment logic remains the same
+// Clean invalid offers before validation
+RideRequestSchema.pre("validate", function (next) {
+  if (Array.isArray(this.offers)) {
+    this.offers = this.offers.filter(
+      (offer) =>
+        offer.truck_id &&
+        offer.offered_price !== undefined &&
+        offer.offered_price !== null
+    );
+  }
+  next();
+});
+
+// Auto-increment logic
 RideRequestSchema.pre("save", async function (next) {
   if (!this.isNew || this.request_id) return next();
 
