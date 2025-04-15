@@ -3,65 +3,45 @@ const Counter = require("./counter-model");
 
 const RideRequestSchema = new mongoose.Schema(
   {
-    request_id: {
-      type: Number,
-      unique: true,
-    },
-    user_id: {
-      type: String,
-      required: true,
-    },
+    user_id: { type: String, required: true },
     origin_location: {
-      long: String,
       lat: String,
+      long: String,
     },
     dest_location: {
-      long: String,
       lat: String,
+      long: String,
     },
+    pickup_date: { type: Date, required: true },
     vehicle_details: {
       Registration: String,
       make: String,
       Model: String,
-      colour: String,
       Yearofmanufacture: Number,
       Wheels_category: {
         type: String,
-        enum: ["rolling", "stationary"],
         default: "rolling",
       },
       vehicle_category: {
         type: String,
-        enum: ["donot-apply", "swb", "mwb", "lwb"],
         default: "donot-apply",
       },
       loaded: {
         type: String,
-        enum: ["donot-apply", "loaded"],
         default: "donot-apply",
       },
     },
+    offers: {
+      type: Array,
+      default: [],
+    },
     status: {
       type: String,
-      enum: [
-        "created",
-        "posted",
-        "accepted",
-        "to_origin",
-        "to_destination",
-        "cleared",
-        "cancelled",
-      ],
       default: "created",
     },
-    offers: {
-      type: [
-        {
-          truck_id: { type: String },
-          offered_price: { type: Number },
-        },
-      ],
-      default: [],
+    request_id: {
+      type: Number,
+      unique: true,
     },
   },
   { timestamps: true }

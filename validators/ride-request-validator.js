@@ -10,13 +10,14 @@ const rideRequestSchema = z.object({
     long: z.string(),
     lat: z.string(),
   }),
+  pickup_date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid pickup date",
+  }),
   vehicle_details: z.object({
     Registration: z.string(),
     make: z.string(),
     Model: z.string(),
-    colour: z.string(),
     Yearofmanufacture: z.number(),
-    // wheels_category: is required field
     Wheels_category: z.enum(["rolling", "stationary"]).default("rolling"),
     vehicle_category: z
       .enum(["donot-apply", "swb", "mwb", "lwb"])
