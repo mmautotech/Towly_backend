@@ -14,6 +14,7 @@ const {
   postRideRequest,
   getAllPostedRideRequests,
   addOfferToRideRequest,
+  getNearbyRideRequests,
 } = require("../controllers/ride-request-controller");
 
 // ======================= VALIDATORS ======================= //
@@ -28,7 +29,6 @@ const {
   getCreatedByUserSchema,
 } = require("../validators/ride-request-validator");
 
-// ======================= MIDDLEWARE ======================= //
 const validateRequest = require("../middlewares/validator-middleware");
 
 // ======================= AUTH ROUTES ======================= //
@@ -41,27 +41,35 @@ router.post(
 );
 
 // ======================= RIDE REQUEST ROUTES ======================= //
+
+// ✅ Create a new ride request
 router.post(
   "/create/ride-request",
   validateRequest(rideRequestSchema),
   createRideRequest
 );
 
+// ✅ Get user's active ride requests
 router.post(
   "/fetch/ride-requests/active",
   validateRequest(getCreatedByUserSchema),
   getActiveRideRequestsByUser
 );
 
+// ✅ Change ride request status to posted
 router.patch(
   "/ride-request/post",
   validateRequest(getCreatedByUserSchema),
   postRideRequest
 );
 
+// ✅ Get all posted ride requests (public)
 router.get("/ride-requests/posted", getAllPostedRideRequests);
 
-router.post("/ride-request/add-offer", addOfferToRideRequest); // Expects: request_id, truck_id, offered_price
+// ✅ Add offer to a ride request (driver side)
+router.post("/ride-request/add-offer", addOfferToRideRequest);
 
-// ======================= EXPORT ROUTER ======================= //
+// ✅ Get nearby ride requests based on location
+router.post("/ride-requests/nearby", getNearbyRideRequests);
+
 module.exports = router;

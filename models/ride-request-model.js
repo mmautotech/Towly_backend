@@ -3,14 +3,32 @@ const Counter = require("./counter-model");
 
 const RideRequestSchema = new mongoose.Schema(
   {
-    user_id: { type: String, required: true },
+    user_id: {
+      type: mongoose.Schema.Types.ObjectId, // 🔄 Changed from String to ObjectId
+      ref: "User", // 🔗 Enables population of user_name
+      required: true,
+    },
     origin_location: {
-      lat: String,
-      long: String,
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     dest_location: {
-      lat: String,
-      long: String,
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     pickup_date: { type: Date, required: true },
     vehicle_details: {
@@ -31,10 +49,16 @@ const RideRequestSchema = new mongoose.Schema(
         default: "donot-apply",
       },
     },
-    offers: {
-      type: Array,
-      default: [],
-    },
+    offers: [
+      {
+        truck_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        offered_price: { type: Number, required: true },
+      },
+    ],
     status: {
       type: String,
       default: "created",
@@ -46,6 +70,10 @@ const RideRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ✅ Add 2dsphere indexes
+RideRequestSchema.index({ origin_location: "2dsphere" });
+RideRequestSchema.index({ dest_location: "2dsphere" });
 
 // Clean invalid offers before validation
 RideRequestSchema.pre("validate", function (next) {

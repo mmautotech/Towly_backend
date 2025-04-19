@@ -1,18 +1,26 @@
 const { z } = require("zod");
 
+const geoPointSchema = z.object({
+  type: z.literal("Point", {
+    errorMap: () => ({ message: 'Location type must be "Point"' }),
+  }),
+  coordinates: z
+    .array(z.number())
+    .length(2, { message: "Coordinates must be [longitude, latitude]" }),
+});
+
 const rideRequestSchema = z.object({
-  user_id: z.string(),
-  origin_location: z.object({
-    long: z.string(),
-    lat: z.string(),
-  }),
-  dest_location: z.object({
-    long: z.string(),
-    lat: z.string(),
-  }),
+  user_id: z
+    .string()
+    .length(24, { message: "Invalid user_id format (must be ObjectId)" }),
+
+  origin_location: geoPointSchema,
+  dest_location: geoPointSchema,
+
   pickup_date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Invalid pickup date",
   }),
+
   vehicle_details: z.object({
     Registration: z.string(),
     make: z.string(),
