@@ -1,11 +1,10 @@
 const mongoose = require("mongoose");
-const Counter = require("./counter-model");
 
 const RideRequestSchema = new mongoose.Schema(
   {
     user_id: {
-      type: mongoose.Schema.Types.ObjectId, // 🔄 Changed from String to ObjectId
-      ref: "User", // 🔗 Enables population of user_name
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
     origin_location: {
@@ -15,7 +14,7 @@ const RideRequestSchema = new mongoose.Schema(
         default: "Point",
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
+        type: [Number],
         required: true,
       },
     },
@@ -26,11 +25,12 @@ const RideRequestSchema = new mongoose.Schema(
         default: "Point",
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
+        type: [Number],
         required: true,
       },
     },
     pickup_date: { type: Date, required: true },
+
     vehicle_details: {
       Registration: String,
       make: String,
@@ -49,6 +49,7 @@ const RideRequestSchema = new mongoose.Schema(
         default: "donot-apply",
       },
     },
+
     offers: [
       {
         truck_id: {
@@ -56,54 +57,64 @@ const RideRequestSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         },
-        offered_price: { type: Number, required: true },
+        offered_price: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        time_to_reach: {
+          type: String,
+          trim: true,
+          maxlength: 50,
+          validate: {
+            validator: (v) => v && v.length > 0,
+            message: "time_to_reach is required",
+          },
+        },
       },
     ],
+
     status: {
       type: String,
+      enum: ["created", "posted", "cleared", "cancelled"],
       default: "created",
-    },
-    request_id: {
-      type: Number,
-      unique: true,
     },
   },
   { timestamps: true }
 );
 
-// ✅ Add 2dsphere indexes
-RideRequestSchema.index({ origin_location: "2dsphere" });
-RideRequestSchema.index({ dest_location: "2dsphere" });
+// ✅ 2dsphere Indexes
+RideRequestSchema.index(
+  { origin_location: "2dsphere" },
+  { name: "2dsphere_origin" }
+);
+RideRequestSchema.index(
+  { dest_location: "2dsphere" },
+  { name: "2dsphere_dest" }
+);
 
-// Clean invalid offers before validation
+// ✅ Validate and Deduplicate Offers
 RideRequestSchema.pre("validate", function (next) {
   if (Array.isArray(this.offers)) {
+    // Remove invalid offers
     this.offers = this.offers.filter(
       (offer) =>
         offer.truck_id &&
         offer.offered_price !== undefined &&
-        offer.offered_price !== null
+        offer.offered_price !== null &&
+        offer.time_to_reach?.trim() !== ""
     );
+
+    // Ensure only one offer per truck_id
+    const seen = new Map();
+    this.offers = this.offers.filter((offer) => {
+      const key = offer.truck_id.toString();
+      if (seen.has(key)) return false;
+      seen.set(key, true);
+      return true;
+    });
   }
   next();
-});
-
-// Auto-increment logic
-RideRequestSchema.pre("save", async function (next) {
-  if (!this.isNew || this.request_id) return next();
-
-  try {
-    const counter = await Counter.findOneAndUpdate(
-      { name: "ride_request" },
-      { $inc: { value: 1 } },
-      { new: true, upsert: true }
-    );
-
-    this.request_id = counter.value;
-    next();
-  } catch (err) {
-    next(err);
-  }
 });
 
 module.exports = mongoose.model("RideRequest", RideRequestSchema);

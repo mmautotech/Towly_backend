@@ -49,11 +49,30 @@ const rideRequestSchema = z.object({
 });
 
 const getCreatedByUserSchema = z.object({
-  user_id: z.string().nonempty("User ID is required."),
+  user_id: z.string().length(24, { message: "Invalid user_id" }),
+});
+
+const postRideSchema = z.object({
+  user_id: z.string().length(24, { message: "Invalid user_id format" }),
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+});
+
+const addOfferSchema = z.object({
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+  truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
+  offered_price: z.number().positive("Offered price must be positive"),
+});
+
+const getOffersSchema = z.object({
+  user_id: z.string().min(1, "user_id is required"),
+  request_id: z.string().min(1, "request_id is required"),
 });
 
 module.exports = {
   rideRequestSchema,
   getCreatedByUserSchema,
+  postRideSchema,
+  addOfferSchema,
+  geoPointSchema,
+  getOffersSchema,
 };
-// The above code defines two Zod schemas for validating ride request data in a Node.js application. The `rideRequestSchema` validates the structure of a ride request, including user ID, origin and destination locations, vehicle details, and status. The `getCreatedByUserSchema` validates that a user ID is provided when fetching ride requests created by a specific user. These schemas help ensure that incoming data meets the expected format before processing it further in the application.

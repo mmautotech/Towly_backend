@@ -11,6 +11,9 @@ const errorHandler = require("./middlewares/error-middleware");
 
 const app = express();
 
+const setupSwaggerDocs = require("./utils/swagger");
+setupSwaggerDocs(app);
+
 // Define PORT with fallback to 5000
 const PORT = process.env.PORT || 5000;
 

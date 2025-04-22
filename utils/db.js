@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const RideRequest = require("../models/ride-request-model");
 // Connect to MongoDB Atlas
 const connectDb = async () => {
   try {
@@ -10,6 +10,8 @@ const connectDb = async () => {
       family: 4, // Force IPv4
     });
 
+    // 🔄 Ensure all indexes are created
+    await RideRequest.syncIndexes();
     console.log("✅ Database connection successful");
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);

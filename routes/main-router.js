@@ -10,11 +10,14 @@ const {
 
 const {
   createRideRequest,
-  getActiveRideRequestsByUser,
   postRideRequest,
-  getAllPostedRideRequests,
+  cancelRideRequest,
+  getActiveRideRequestsByUser,
   addOfferToRideRequest,
   getNearbyRideRequests,
+  getAppliedRide_postedRequests,
+  getUnappliedRide_postedRequests,
+  getOffersForRideRequest,
 } = require("../controllers/ride-request-controller");
 
 // ======================= VALIDATORS ======================= //
@@ -27,6 +30,9 @@ const {
 const {
   rideRequestSchema,
   getCreatedByUserSchema,
+  postRideSchema,
+  addOfferSchema,
+  getOffersSchema,
 } = require("../validators/ride-request-validator");
 
 const validateRequest = require("../middlewares/validator-middleware");
@@ -59,17 +65,31 @@ router.post(
 // ✅ Change ride request status to posted
 router.patch(
   "/ride-request/post",
-  validateRequest(getCreatedByUserSchema),
+  validateRequest(postRideSchema),
   postRideRequest
 );
 
-// ✅ Get all posted ride requests (public)
-router.get("/ride-requests/posted", getAllPostedRideRequests);
+// ✅ Cancel ride request status.
+router.patch("/ride-request/cancel", cancelRideRequest);
+
+// ✅ Get all applied & new ride requests (public)
+router.post("/ride-requests/applied", getAppliedRide_postedRequests);
+router.post("/ride-requests/new", getUnappliedRide_postedRequests);
 
 // ✅ Add offer to a ride request (driver side)
-router.post("/ride-request/add-offer", addOfferToRideRequest);
+router.post(
+  "/ride-request/add-offer",
+  validateRequest(addOfferSchema),
+  addOfferToRideRequest
+);
 
 // ✅ Get nearby ride requests based on location
 router.post("/ride-requests/nearby", getNearbyRideRequests);
+
+router.post(
+  "/ride-request/offers",
+  validateRequest(getOffersSchema),
+  getOffersForRideRequest
+);
 
 module.exports = router;

@@ -3,6 +3,38 @@ const User = require("../models/user-model"); // User model for database operati
 const sendSuccessResponse = require("../utils/success-response");
 
 /**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: JohnDoe
+ *               phoneNo:
+ *                 type: string
+ *                 example: +441234567890
+ *               password:
+ *                 type: string
+ *                 example: secretPass123
+ *               role:
+ *                 type: string
+ *                 enum: [admin, truck, client]
+ *                 example: client
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Phone number already exists
+ */
+/**
  * @desc  👤 Register a new user (Signup)
  * @route POST /auth/register
  * @access Public
@@ -50,6 +82,31 @@ const registerUser = async (req, res, next) => {
 };
 
 /**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login using phone number and password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phoneNo:
+ *                 type: string
+ *                 example: +441234567890
+ *               password:
+ *                 type: string
+ *                 example: secretPass123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid phone number or password
+ */
+/**
  * @desc  🔑 Login User using phone and password
  * @route POST /auth/login
  * @access Public
@@ -83,6 +140,31 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Reset password using phone number
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phoneNo:
+ *                 type: string
+ *                 example: +441234567890
+ *               password:
+ *                 type: string
+ *                 example: newSecurePassword
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       404:
+ *         description: User not found
+ */
 /**
  * @desc  🔄 Forgot Password: update password using phone number
  * @route POST /auth/forgot-password
