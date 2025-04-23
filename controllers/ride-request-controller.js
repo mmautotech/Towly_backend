@@ -123,7 +123,21 @@ const getActiveRideRequestsByUser = async (req, res, next) => {
  */
 const addOfferToRideRequest = async (req, res, next) => {
   try {
-    const { request_id, truck_id, offered_price, time_to_reach } = req.body;
+    let { request_id, truck_id, offered_price, days, hours, minutes } =
+      req.body;
+
+    if (!request_id || !truck_id || offered_price == null) {
+      return next(
+        new Error("request_id, truck_id, and offered_price are required.")
+      );
+    }
+
+    // Set defaults
+    days = parseInt(days ?? 0, 10);
+    hours = parseInt(hours ?? 0, 10);
+    minutes = parseInt(minutes ?? 0, 10);
+
+    const time_to_reach = `${days}d ${hours}h ${minutes}m`;
 
     if (!request_id || !truck_id || !offered_price || !time_to_reach) {
       return next(

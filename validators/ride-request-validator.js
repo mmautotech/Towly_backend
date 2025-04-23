@@ -61,6 +61,9 @@ const addOfferSchema = z.object({
   request_id: z.string().length(24, { message: "Invalid request_id format" }),
   truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
   offered_price: z.number().positive("Offered price must be positive"),
+  days: z.number().int().min(0).optional().default(0),
+  hours: z.number().int().min(0).max(23).optional().default(0),
+  minutes: z.number().int().min(0).max(59).optional().default(0),
 });
 
 const getOffersSchema = z.object({
