@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const RideRequest = require("../models/ride-request-model");
+const { RideRequest } = require("../models");
 // Connect to MongoDB Atlas
 const connectDb = async () => {
   try {
