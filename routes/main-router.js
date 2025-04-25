@@ -13,11 +13,13 @@ const {
   postRideRequest,
   cancelRideRequest,
   getActiveRideRequestsByUser,
-  addOfferToRideRequest,
   getNearbyRideRequests,
   getAppliedRide_postedRequests,
   getUnappliedRide_postedRequests,
   getOffersForRideRequest,
+  getSingleTruckOffer,
+  addOfferToRideRequest,
+  addCounterOfferToRideRequest,
 } = require("../controllers/ride-request");
 
 const { updateUserLocation, updateUserRating } = require("../controllers/user");
@@ -33,8 +35,11 @@ const {
   rideRequestSchema,
   getCreatedByUserSchema,
   postRideSchema,
-  addOfferSchema,
+  geoPointSchema,
   getOffersSchema,
+  getSingleTruckOfferSchema,
+  addOfferSchema,
+  addCounterOfferSchema,
 } = require("../validators/ride-request-validator");
 
 const validateRequest = require("../middlewares/validator-middleware");
@@ -67,16 +72,26 @@ router.patch(
 router.patch("/ride-request/cancel", cancelRideRequest);
 router.post("/ride-requests/applied", getAppliedRide_postedRequests);
 router.post("/ride-requests/new", getUnappliedRide_postedRequests);
-router.post(
-  "/ride-request/add-offer",
-  validateRequest(addOfferSchema),
-  addOfferToRideRequest
-);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
 router.post(
   "/ride-request/offers",
   validateRequest(getOffersSchema),
   getOffersForRideRequest
+);
+router.post(
+  "/ride-request/truck-offer",
+  validateRequest(getSingleTruckOfferSchema),
+  getSingleTruckOffer
+);
+router.post(
+  "/ride-request/add-offer",
+  validateRequest(addOfferSchema),
+  addOfferToRideRequest
+);
+router.post(
+  "/ride-request/counter-offer",
+  validateRequest(addCounterOfferSchema),
+  addCounterOfferToRideRequest
 );
 
 // ======================= USER ROUTES (NEW) ======================= //

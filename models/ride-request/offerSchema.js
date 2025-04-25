@@ -21,6 +21,9 @@ const offerSchema = new mongoose.Schema(
         message: "time_to_reach is required",
       },
     },
+    client_counter_price: {
+      type: Number,
+    },
   },
   { timestamps: true }
 );

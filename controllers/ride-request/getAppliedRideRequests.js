@@ -1,3 +1,5 @@
+// controllers/ride-request/getAppliedRideRequests.js
+
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
@@ -23,36 +25,47 @@ const sendSuccessResponse = require("../../utils/success-response");
  *       200:
  *         description: Applied ride requests returned
  */
-/**
- * @desc Get ride requests where truck has already applied
- * @route POST /api/ride-requests/applied
- */
 const getAppliedRide_postedRequests = async (req, res, next) => {
   try {
     const { truck_id } = req.body;
     if (!truck_id) return next(new Error("truck_id is required."));
 
+    const truckObjectId = new ObjectId(truck_id);
+
+    // Find all posted requests where this truck has an offer
     const requests = await RideRequest.find({
       status: "posted",
-      offers: {
-        $elemMatch: {
-          truck_id: new ObjectId(truck_id),
-        },
-      },
+      "offers.truck_id": truckObjectId,
     })
       .populate("user_id", "user_name")
       .lean();
 
-    const formatted = requests.map((req) => ({
-      request_id: req._id,
-      origin_location: req.origin_location,
-      dest_location: req.dest_location,
-      vehicle_details: req.vehicle_details,
-      pickup_date: req.pickup_date,
-      updatedAt: req.updatedAt,
-      username: req.user_id?.user_name || "Unknown",
-      offers: req.offers || [],
-    }));
+    // For each request, pick only the matching offer
+    const formatted = requests.map((r) => {
+      const offer = (r.offers || []).find(
+        (o) => o.truck_id.toString() === truck_id
+      );
+
+      return {
+        request_id: r._id,
+        origin_location: r.origin_location,
+        dest_location: r.dest_location,
+        vehicle_details: r.vehicle_details,
+        pickup_date: r.pickup_date,
+        updatedAt: r.updatedAt,
+        username: r.user_id?.user_name || "Unknown",
+        offer: offer
+          ? {
+              offer_id: offer._id,
+              offered_price: offer.offered_price,
+              time_to_reach: offer.time_to_reach,
+              client_counter_price: offer.client_counter_price ?? null,
+              createdAt: offer.createdAt,
+              updatedAt: offer.updatedAt,
+            }
+          : null,
+      };
+    });
 
     return sendSuccessResponse(res, "Applied ride requests", formatted);
   } catch (error) {

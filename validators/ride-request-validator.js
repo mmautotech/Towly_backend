@@ -57,6 +57,22 @@ const postRideSchema = z.object({
   request_id: z.string().length(24, { message: "Invalid request_id format" }),
 });
 
+const getOffersSchema = z.object({
+  user_id: z.string().min(1, "user_id is required"),
+  request_id: z.string().min(1, "request_id is required"),
+});
+
+const getSingleTruckOfferSchema = z.object({
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+  truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
+});
+
+const addCounterOfferSchema = z.object({
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+  offer_id: z.string().length(24, { message: "Invalid offer_id format" }),
+  client_counter_price: z.number().positive("Counter price must be positive"),
+});
+
 const addOfferSchema = z.object({
   request_id: z.string().length(24, { message: "Invalid request_id format" }),
   truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
@@ -66,16 +82,13 @@ const addOfferSchema = z.object({
   minutes: z.number().int().min(0).max(59).optional().default(0),
 });
 
-const getOffersSchema = z.object({
-  user_id: z.string().min(1, "user_id is required"),
-  request_id: z.string().min(1, "request_id is required"),
-});
-
 module.exports = {
   rideRequestSchema,
   getCreatedByUserSchema,
   postRideSchema,
-  addOfferSchema,
   geoPointSchema,
   getOffersSchema,
+  getSingleTruckOfferSchema,
+  addOfferSchema,
+  addCounterOfferSchema,
 };
