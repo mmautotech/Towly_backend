@@ -17,7 +17,7 @@ const RideRequestSchema = new mongoose.Schema(
     offers: [offerSchema],
     status: {
       type: String,
-      enum: ["created", "posted", "cleared", "cancelled"],
+      enum: ["created", "posted", "cleared", "cancelled", "Accepted", "completed"],
       default: "created",
     },
   },

@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 8,
-    select: false, // Prevent returning password in queries
+    select: false,
   },
   role: {
     type: String,
@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
     default: 0,
   },
   geolocation: geoPointSchema,
+  pushToken: {
+    type: String,
+    required: false,
+  },
   created_at: {
     type: Date,
     default: Date.now,

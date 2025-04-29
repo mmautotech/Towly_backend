@@ -12,14 +12,17 @@ const {
   createRideRequest,
   postRideRequest,
   cancelRideRequest,
+  acceptRideRequest,
   getActiveRideRequestsByUser,
   getNearbyRideRequests,
   getAppliedRide_postedRequests,
+  getAcceptedRide_postedRequests,  // <-- Updated controller
   getUnappliedRide_postedRequests,
   getOffersForRideRequest,
   getSingleTruckOffer,
   addOfferToRideRequest,
   addCounterOfferToRideRequest,
+  getcompletedRide,
 } = require("../controllers/ride-request");
 
 const { updateUserLocation, updateUserRating } = require("../controllers/user");
@@ -70,9 +73,15 @@ router.patch(
   postRideRequest
 );
 router.patch("/ride-request/cancel", cancelRideRequest);
-router.post("/ride-requests/applied", getAppliedRide_postedRequests);
+router.patch("/ride-request/accept", acceptRideRequest);
+
+// Route to get both applied and accepted requests (Updated to use new controller)
+router.post("/ride-requests/applied", getAppliedRide_postedRequests);  // <-- Updated
+router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
+// Route to get newly posted requests (still the same)
 router.post("/ride-requests/new", getUnappliedRide_postedRequests);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
+router.post("/ride-requests/completed", getcompletedRide),
 router.post(
   "/ride-request/offers",
   validateRequest(getOffersSchema),
