@@ -38,7 +38,9 @@ const getActiveRideRequestsByUser = async (req, res, next) => {
     const activeRequests = await RideRequest.find({
       user_id: new ObjectId(user_id),
       status: { $nin: ["cleared", "cancelled"] },
-    }).select("status origin_location dest_location vehicle_details");
+    }).select(
+      "status origin_location dest_location vehicle_details pickup_date"
+    );
 
     return sendSuccessResponse(res, "Active ride requests", activeRequests);
   } catch (error) {
