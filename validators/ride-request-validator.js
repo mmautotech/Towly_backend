@@ -57,6 +57,17 @@ const postRideSchema = z.object({
   request_id: z.string().length(24, { message: "Invalid request_id format" }),
 });
 
+const acceptRideSchema = z.object({
+  user_id: z.string().length(24, { message: "Invalid user_id format" }),
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+  offer_id: z.string().length(24, { message: "Invalid offer_id format" }),
+});
+
+const cancelRideSchema = z.object({
+  user_id: z.string().length(24, { message: "Invalid user_id format" }),
+  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+});
+
 const getOffersSchema = z.object({
   user_id: z.string().min(1, "user_id is required"),
   request_id: z.string().min(1, "request_id is required"),
@@ -86,6 +97,8 @@ module.exports = {
   rideRequestSchema,
   getCreatedByUserSchema,
   postRideSchema,
+  acceptRideSchema,
+  cancelRideSchema,
   geoPointSchema,
   getOffersSchema,
   getSingleTruckOfferSchema,

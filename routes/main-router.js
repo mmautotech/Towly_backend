@@ -16,7 +16,7 @@ const {
   getActiveRideRequestsByUser,
   getNearbyRideRequests,
   getAppliedRide_postedRequests,
-  getAcceptedRide_postedRequests,  // <-- Updated controller
+  getAcceptedRide_postedRequests, // <-- Updated controller
   getUnappliedRide_postedRequests,
   getOffersForRideRequest,
   getSingleTruckOffer,
@@ -38,6 +38,8 @@ const {
   rideRequestSchema,
   getCreatedByUserSchema,
   postRideSchema,
+  acceptRideSchema,
+  cancelRideSchema,
   geoPointSchema,
   getOffersSchema,
   getSingleTruckOfferSchema,
@@ -62,31 +64,39 @@ router.post(
   validateRequest(rideRequestSchema),
   createRideRequest
 );
-router.post(
-  "/fetch/ride-requests/active",
-  validateRequest(getCreatedByUserSchema),
-  getActiveRideRequestsByUser
+router.patch(
+  "/ride-request/cancel",
+  validateRequest(cancelRideSchema),
+  cancelRideRequest
 );
 router.patch(
   "/ride-request/post",
   validateRequest(postRideSchema),
   postRideRequest
 );
-router.patch("/ride-request/cancel", cancelRideRequest);
-router.patch("/ride-request/accept", acceptRideRequest);
+router.patch(
+  "/ride-request/accept",
+  validateRequest(acceptRideSchema),
+  acceptRideRequest
+);
+router.post(
+  "/fetch/ride-requests/active",
+  validateRequest(getCreatedByUserSchema),
+  getActiveRideRequestsByUser
+);
 
 // Route to get both applied and accepted requests (Updated to use new controller)
-router.post("/ride-requests/applied", getAppliedRide_postedRequests);  // <-- Updated
+router.post("/ride-requests/applied", getAppliedRide_postedRequests); // <-- Updated
 router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
 // Route to get newly posted requests (still the same)
 router.post("/ride-requests/new", getUnappliedRide_postedRequests);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
 router.post("/ride-requests/completed", getcompletedRide),
-router.post(
-  "/ride-request/offers",
-  validateRequest(getOffersSchema),
-  getOffersForRideRequest
-);
+  router.post(
+    "/ride-request/offers",
+    validateRequest(getOffersSchema),
+    getOffersForRideRequest
+  );
 router.post(
   "/ride-request/truck-offer",
   validateRequest(getSingleTruckOfferSchema),

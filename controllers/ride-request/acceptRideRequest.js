@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -6,7 +7,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  * @swagger
  * /ride-request/accept:
  *   patch:
- *     summary: Accept a ride request
+ *     summary: Accept a ride request with a specific offer
  *     tags: [RideRequest]
  *     requestBody:
  *       required: true
@@ -14,49 +15,63 @@ const sendSuccessResponse = require("../../utils/success-response");
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, request_id]
+ *             required: [user_id, request_id, offer_id]
  *             properties:
  *               user_id:
  *                 type: string
  *               request_id:
  *                 type: string
+ *               offer_id:
+ *                 type: string
  *     responses:
  *       200:
- *         description: Ride request accepted
- */
-/**
- * @desc Change ride request status to 'Accepted' and mark it with the trucker's user_id
- * @route PATCH /api/ride-request/accept
+ *         description: Offer accepted successfully.
  */
 const acceptRideRequest = async (req, res, next) => {
-  const { user_id, request_id } = req.body;
-
-  if (!user_id || !request_id) {
-    return res.status(400).json({ message: "user_id and request_id are required" });
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(user_id) || !mongoose.Types.ObjectId.isValid(request_id)) {
-    return res.status(400).json({ message: "Invalid user_id or request_id" });
-  }
-
   try {
-    const request = await RideRequest.findById(request_id);
+    const { user_id, request_id, offer_id } = req.body;
 
-    if (!request) {
-      return res.status(404).json({ message: "Ride request not found" });
+    // ensure all parameters are provided
+    if (!user_id || !request_id || !offer_id) {
+      return next(new Error("user_id, request_id and offer_id are required."));
     }
 
-    if (request.status === "Accepted") {
-      return res.status(400).json({ message: "Ride request is already accepted" });
+    // validate ObjectId formats
+    if (
+      !ObjectId.isValid(user_id) ||
+      !ObjectId.isValid(request_id) ||
+      !ObjectId.isValid(offer_id)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid user_id, request_id or offer_id" });
     }
 
-    request.status = "Accepted";
-    request.accepted_by = user_id;
-    await request.save();
+    // find the ride request that is still posted and contains the given offer
+    const updatedRequest = await RideRequest.findOneAndUpdate(
+      {
+        user_id: new ObjectId(user_id),
+        _id: new ObjectId(request_id),
+        status: "posted",
+        "offers._id": new ObjectId(offer_id),
+      },
+      {
+        status: "accepted",
+        accepted_offer: new ObjectId(offer_id),
+      },
+      { new: true }
+    );
 
-    return sendSuccessResponse(res, request, "Ride request accepted successfully.");
-  } catch (err) {
-    return next(err);
+    if (!updatedRequest) {
+      return next(
+        new Error("Ride request not found, not posted, or offer_id invalid.")
+      );
+    }
+
+    // respond with custom message including the offer_id
+    return sendSuccessResponse(res, `${offer_id} Offer accepted successfully`);
+  } catch (error) {
+    return next(error);
   }
 };
 

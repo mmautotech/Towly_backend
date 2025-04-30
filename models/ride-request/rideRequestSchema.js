@@ -15,9 +15,21 @@ const RideRequestSchema = new mongoose.Schema(
     pickup_date: { type: Date, required: true },
     vehicle_details: vehicleSchema,
     offers: [offerSchema],
+    accepted_offer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Offer",
+      required: false,
+    },
     status: {
       type: String,
-      enum: ["created", "posted", "cleared", "cancelled", "Accepted", "completed"],
+      enum: [
+        "created",
+        "posted",
+        "cleared",
+        "cancelled",
+        "Accepted",
+        "completed",
+      ],
       default: "created",
     },
   },

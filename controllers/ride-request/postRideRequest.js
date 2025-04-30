@@ -37,6 +37,13 @@ const postRideRequest = async (req, res, next) => {
       return next(new Error("user_id and request_id are required."));
     }
 
+    if (
+      !mongoose.Types.ObjectId.isValid(user_id) ||
+      !mongoose.Types.ObjectId.isValid(request_id)
+    ) {
+      return res.status(400).json({ message: "Invalid user_id or request_id" });
+    }
+
     const updatedRequest = await RideRequest.findOneAndUpdate(
       {
         user_id: new ObjectId(user_id),

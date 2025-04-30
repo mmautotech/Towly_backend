@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -28,14 +29,20 @@ const sendSuccessResponse = require("../../utils/success-response");
  * @route PATCH /api/ride-request/cancel
  */
 const cancelRideRequest = async (req, res, next) => {
-  const { user_id, request_id } = req.body;
-  if (!user_id || !request_id) {
-    return res
-      .status(400)
-      .json({ message: "user_id and request_id are required" });
-  }
-
   try {
+    const { user_id, request_id } = req.body;
+
+    if (!user_id || !request_id) {
+      return next(new Error("user_id and request_id are required."));
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(user_id) ||
+      !mongoose.Types.ObjectId.isValid(request_id)
+    ) {
+      return res.status(400).json({ message: "Invalid user_id or request_id" });
+    }
+
     await RideRequest.findOneAndUpdate(
       { _id: request_id, user_id },
       { status: "cancelled" }
