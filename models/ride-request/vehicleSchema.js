@@ -1,22 +1,25 @@
 const mongoose = require("mongoose");
 
-const vehicleSchema = new mongoose.Schema({
-  Registration: String,
-  make: String,
-  Model: String,
-  Yearofmanufacture: Number,
-  Wheels_category: {
-    type: String,
-    default: "rolling",
+const vehicleSchema = new mongoose.Schema(
+  {
+    registration: String,
+    make: String,
+    model: String,
+    year_of_manufacture: Number,
+    wheels_category: {
+      type: String,
+      default: "rolling",
+    },
+    vehicle_category: {
+      type: String,
+      default: "donot-apply",
+    },
+    loaded: {
+      type: String,
+      default: "donot-apply",
+    },
   },
-  vehicle_category: {
-    type: String,
-    default: "donot-apply",
-  },
-  loaded: {
-    type: String,
-    default: "donot-apply",
-  },
-});
+  { _id: false }
+);
 
 module.exports = vehicleSchema;

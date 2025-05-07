@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const geoPointSchema = require("../user/geoPointSchema");
+const geoPointSchema = require("../user/geoPoint.schema");
 const vehicleSchema = require("./vehicleSchema");
 const offerSchema = require("./offerSchema");
 
@@ -22,18 +22,11 @@ const RideRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: [
-        "created",
-        "posted",
-        "cleared",
-        "cancelled",
-        "Accepted",
-        "completed",
-      ],
+      enum: ["created", "posted", "accepted", "completed", "cancelled"],
       default: "created",
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "ride_requests" }
 );
 
 RideRequestSchema.index({ origin_location: "2dsphere" });

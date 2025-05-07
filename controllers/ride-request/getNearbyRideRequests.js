@@ -1,6 +1,5 @@
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-
 /**
  * @swagger
  * /ride-requests/nearby:

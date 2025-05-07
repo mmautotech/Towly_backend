@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-
 /**
  * @swagger
  * /ride-requests/accepted:
@@ -50,7 +49,7 @@ const getAcceptedRide_postedRequests = async (req, res, next) => {
         pickup_date: r.pickup_date,
         updatedAt: r.updatedAt,
         username: r.user_id?.user_name || "Unknown",
-        status:r.status,
+        status: r.status,
         offer: offer
           ? {
               offer_id: offer._id,

@@ -1,18 +1,26 @@
+// controllers/user/updateUserLocation.js
 const { User } = require("../../models");
+const sendSuccessResponse = require("../../utils/success-response");
 
 /**
  * @swagger
  * /user/update-location:
  *   post:
- *     summary: Update truck's current geolocation (longitude, latitude)
- *     tags: [User]
+ *     summary: Update the user's current geolocation (longitude, latitude)
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, longitude, latitude]
+ *             required:
+ *               - user_id
+ *               - longitude
+ *               - latitude
  *             properties:
  *               user_id:
  *                 type: string
@@ -22,7 +30,22 @@ const { User } = require("../../models");
  *                 type: number
  *     responses:
  *       200:
- *         description: Truck location updated
+ *         description: Location updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Location updated successfully.
+ *       400:
+ *         description: Bad request – missing or invalid fields
+ *       500:
+ *         description: Internal server error
  */
 const updateUserLocation = async (req, res, next) => {
   const { user_id, longitude, latitude } = req.body;
@@ -36,16 +59,10 @@ const updateUserLocation = async (req, res, next) => {
 
   try {
     await User.findByIdAndUpdate(user_id, {
-      geolocation: {
-        type: "Point",
-        coordinates: [longitude, latitude],
-      },
+      geolocation: { type: "Point", coordinates: [longitude, latitude] },
     });
 
-    res.status(200).json({
-      success: true,
-      message: "Truck location updated.",
-    });
+    sendSuccessResponse(res, "Location updated successfully.");
   } catch (error) {
     next(error);
   }

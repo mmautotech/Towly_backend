@@ -1,37 +1,29 @@
+// validators/ride-request-validator.js
 const { z } = require("zod");
 
-const geoPointSchema = z.object({
-  type: z.literal("Point", {
-    errorMap: () => ({ message: 'Location type must be "Point"' }),
-  }),
-  coordinates: z
-    .array(z.number())
-    .length(2, { message: "Coordinates must be [longitude, latitude]" }),
+// reuse the geo/schema from your models if you like, or redefine:
+const geo_point_schema = z.object({
+  type: z.literal("Point"),
+  coordinates: z.array(z.number()).length(2, "Must be [lng, lat]"),
 });
 
-const rideRequestSchema = z.object({
-  user_id: z
+const ride_request_schema = z.object({
+  user_id: z.string().length(24, "Invalid user_id"),
+  origin_location: geo_point_schema,
+  dest_location: geo_point_schema,
+  pickup_date: z
     .string()
-    .length(24, { message: "Invalid user_id format (must be ObjectId)" }),
-
-  origin_location: geoPointSchema,
-  dest_location: geoPointSchema,
-
-  pickup_date: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid pickup date",
-  }),
-
+    .refine((v) => !isNaN(Date.parse(v)), "Invalid pickup_date"),
   vehicle_details: z.object({
-    Registration: z.string(),
+    registration: z.string(),
     make: z.string(),
-    Model: z.string(),
-    Yearofmanufacture: z.number(),
-    Wheels_category: z.enum(["rolling", "stationary"]).default("rolling"),
+    model: z.string(),
+    year_of_manufacture: z.number(),
+    wheels_category: z.enum(["rolling", "stationary"]).default("rolling"),
     vehicle_category: z
       .enum(["donot-apply", "swb", "mwb", "lwb"])
-      .optional()
       .default("donot-apply"),
-    loaded: z.enum(["donot-apply", "loaded"]).optional().default("donot-apply"),
+    loaded: z.enum(["donot-apply", "loaded"]).default("donot-apply"),
   }),
   status: z
     .enum([
@@ -43,65 +35,59 @@ const rideRequestSchema = z.object({
       "cleared",
       "cancelled",
     ])
-    .optional()
     .default("created"),
-  offer: z.record(z.any()).optional().default({}),
+  // offers & other sub-schemas can remain as needed
 });
 
-const getCreatedByUserSchema = z.object({
-  user_id: z.string().length(24, { message: "Invalid user_id" }),
+const get_created_by_user_schema = z.object({
+  user_id: z.string().length(24, "Invalid user_id"),
 });
 
-const postRideSchema = z.object({
-  user_id: z.string().length(24, { message: "Invalid user_id format" }),
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+const post_ride_schema = z.object({
+  user_id: z.string().length(24, "Invalid user_id"),
+  request_id: z.string().length(24, "Invalid request_id"),
 });
 
-const acceptRideSchema = z.object({
-  user_id: z.string().length(24, { message: "Invalid user_id format" }),
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
-  offer_id: z.string().length(24, { message: "Invalid offer_id format" }),
+const accept_ride_schema = post_ride_schema.extend({
+  offer_id: z.string().length(24, "Invalid offer_id"),
 });
 
-const cancelRideSchema = z.object({
-  user_id: z.string().length(24, { message: "Invalid user_id format" }),
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
+const cancel_ride_schema = post_ride_schema;
+
+const get_offers_schema = z.object({
+  user_id: z.string().min(1),
+  request_id: z.string().min(1),
 });
 
-const getOffersSchema = z.object({
-  user_id: z.string().min(1, "user_id is required"),
-  request_id: z.string().min(1, "request_id is required"),
+const get_single_truck_offer_schema = z.object({
+  request_id: z.string().length(24),
+  truck_id: z.string().length(24),
 });
 
-const getSingleTruckOfferSchema = z.object({
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
-  truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
+const add_offer_schema = z.object({
+  request_id: z.string().length(24),
+  truck_id: z.string().length(24),
+  offered_price: z.number().positive(),
+  days: z.number().int().min(0).default(0),
+  hours: z.number().int().min(0).max(23).default(0),
+  minutes: z.number().int().min(0).max(59).default(0),
 });
 
-const addCounterOfferSchema = z.object({
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
-  offer_id: z.string().length(24, { message: "Invalid offer_id format" }),
-  client_counter_price: z.number().positive("Counter price must be positive"),
-});
-
-const addOfferSchema = z.object({
-  request_id: z.string().length(24, { message: "Invalid request_id format" }),
-  truck_id: z.string().length(24, { message: "Invalid truck_id format" }),
-  offered_price: z.number().positive("Offered price must be positive"),
-  days: z.number().int().min(0).optional().default(0),
-  hours: z.number().int().min(0).max(23).optional().default(0),
-  minutes: z.number().int().min(0).max(59).optional().default(0),
+const add_counter_offer_schema = z.object({
+  request_id: z.string().length(24),
+  offer_id: z.string().length(24),
+  client_counter_price: z.number().positive(),
 });
 
 module.exports = {
-  rideRequestSchema,
-  getCreatedByUserSchema,
-  postRideSchema,
-  acceptRideSchema,
-  cancelRideSchema,
-  geoPointSchema,
-  getOffersSchema,
-  getSingleTruckOfferSchema,
-  addOfferSchema,
-  addCounterOfferSchema,
+  ride_request_schema,
+  get_created_by_user_schema,
+  post_ride_schema,
+  accept_ride_schema,
+  cancel_ride_schema,
+  get_offers_schema,
+  get_single_truck_offer_schema,
+  add_offer_schema,
+  add_counter_offer_schema,
 };
+// ===================== 📝 Ride Request Validation Schema ===================== //

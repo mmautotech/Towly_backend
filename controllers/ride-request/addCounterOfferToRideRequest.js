@@ -1,3 +1,7 @@
+const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
+const { RideRequest } = require("../../models");
+const sendSuccessResponse = require("../../utils/success-response");
 /**
  * @swagger
  * /ride-request/counter-offer:
@@ -25,10 +29,6 @@
  *       200:
  *         description: Counter offer submitted successfully
  */
-const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
-const { RideRequest } = require("../../models");
-const sendSuccessResponse = require("../../utils/success-response");
 
 const addCounterOfferToRideRequest = async (req, res, next) => {
   try {

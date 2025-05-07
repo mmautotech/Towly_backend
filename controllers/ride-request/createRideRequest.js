@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
-
 /**
  * @swagger
  * /create/ride-request:

@@ -1,21 +1,36 @@
+// these two export the function directly:
+const createRideRequest = require("./createRideRequest");
+const postRideRequest = require("./postRideRequest");
+const cancelRideRequest = require("./cancelRideRequest");
 const acceptRideRequest = require("./acceptRideRequest");
-const getAcceptedRide_postedRequests = require("./getAcceptedRideRequests");
 
+const getActiveRideRequestsByUser = require("./getActiveRideRequestsByUser");
+const getNearbyRideRequests = require("./getNearbyRideRequests");
+const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
+const getAcceptedRide_postedRequests = require("./getAcceptedRideRequests");
+const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
+const getcompletedRide = require("./getCompletedRideRequest");
+
+// Offers related
+const getOffersForRideRequest = require("./getOffersForRideRequest");
+const getSingleTruckOffer = require("./getSingleTruckOffer");
+const addOfferToRideRequest = require("./addOfferToRideRequest");
+const addCounterOfferToRideRequest = require("./addCounterOfferToRideRequest");
 
 module.exports = {
-  createRideRequest: require("./createRideRequest"),
-  postRideRequest: require("./postRideRequest"),
-  cancelRideRequest: require("./cancelRideRequest"),
-  acceptRideRequest: require("./acceptRideRequest"),
-  getActiveRideRequestsByUser: require("./getActiveRideRequestsByUser"),
-  getNearbyRideRequests: require("./getNearbyRideRequests"),
-  getAppliedRide_postedRequests: require("./getAppliedRideRequests"),
-  getAcceptedRide_postedRequests: require("./getAcceptedRideRequests"),
-  getUnappliedRide_postedRequests: require("./getUnappliedRideRequests"),
-  getcompletedRide: require("./getCompletedRideRequest"),
+  createRideRequest,
+  postRideRequest,
+  cancelRideRequest,
+  acceptRideRequest,
+  getActiveRideRequestsByUser,
+  getNearbyRideRequests,
+  getAppliedRide_postedRequests,
+  getAcceptedRide_postedRequests,
+  getUnappliedRide_postedRequests,
+  getcompletedRide,
   // Offers related
-  getOffersForRideRequest: require("./getOffersForRideRequest"),
-  getSingleTruckOffer: require("./getSingleTruckOffer"),
-  addOfferToRideRequest: require("./addOfferToRideRequest"),
-  addCounterOfferToRideRequest: require("./addCounterOfferToRideRequest"),
+  getOffersForRideRequest,
+  getSingleTruckOffer,
+  addOfferToRideRequest,
+  addCounterOfferToRideRequest,
 };

@@ -1,18 +1,25 @@
+// controllers/user/updateUserRating.js
 const { User } = require("../../models");
+const sendSuccessResponse = require("../../utils/success-response");
 
 /**
  * @swagger
  * /user/update-rating:
  *   post:
- *     summary: Update truck's rating (between 0 and 5)
- *     tags: [User]
+ *     summary: Update a user's rating (between 0 and 5)
+ *     tags:
+ *       - User
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, rating]
+ *             required:
+ *               - user_id
+ *               - rating
  *             properties:
  *               user_id:
  *                 type: string
@@ -22,7 +29,24 @@ const { User } = require("../../models");
  *                 maximum: 5
  *     responses:
  *       200:
- *         description: Truck rating updated
+ *         description: Rating updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Truck rating updated successfully.
+ *       400:
+ *         description: Bad request – missing or invalid fields
+ *       401:
+ *         description: Unauthorized – missing or invalid token
+ *       500:
+ *         description: Internal server error
  */
 const updateUserRating = async (req, res, next) => {
   const { user_id, rating } = req.body;
@@ -36,11 +60,7 @@ const updateUserRating = async (req, res, next) => {
 
   try {
     await User.findByIdAndUpdate(user_id, { rating });
-
-    res.status(200).json({
-      success: true,
-      message: "Truck rating updated.",
-    });
+    sendSuccessResponse(res, "Truck rating updated successfully.");
   } catch (error) {
     next(error);
   }

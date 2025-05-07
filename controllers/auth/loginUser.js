@@ -1,3 +1,4 @@
+// controllers/auth/loginUser.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -14,7 +15,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  *           schema:
  *             type: object
  *             properties:
- *               phoneNo:
+ *               phone:
  *                 type: string
  *                 example: +441234567890
  *               password:
@@ -33,8 +34,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const loginUser = async (req, res, next) => {
   try {
-    const { phoneNo, password } = req.body;
-    const user = await User.findOne({ phone: phoneNo }).select("+password");
+    const { phone, password } = req.body;
+    const user = await User.findOne({ phone }).select("+password");
     if (!user || !(await user.comparePassword(password))) {
       return next(new Error("Invalid phone number or password!"));
     }

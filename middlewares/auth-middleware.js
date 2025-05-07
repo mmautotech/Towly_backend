@@ -1,5 +1,6 @@
+// auth-middleware.js
 const jwt = require("jsonwebtoken");
-const User = require("../models/user-model");
+const { User } = require("../models");
 
 const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -7,10 +8,10 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    req.user = await User.findById(decoded.id).select("-password"); // optional
-    next();
+    req.user = await User.findById(decoded.id).select("-password");
+    return next();
   } catch (err) {
-    res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 

@@ -1,3 +1,6 @@
+const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
+const { RideRequest } = require("../../models");
 /**
  * @swagger
  * /ride-request/offers:
@@ -66,11 +69,6 @@
  *                         nullable: true
  *                         example: 8500
  */
-
-const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
-const RideRequest = require("../../models/ride-request");
-
 const getOffersForRideRequest = async (req, res, next) => {
   try {
     const { user_id, request_id } = req.body;

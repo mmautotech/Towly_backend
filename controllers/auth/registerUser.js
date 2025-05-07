@@ -1,3 +1,4 @@
+// controllers/auth/registerUser.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -14,10 +15,10 @@ const sendSuccessResponse = require("../../utils/success-response");
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               user_name:
  *                 type: string
  *                 example: JohnDoe
- *               phoneNo:
+ *               phone:
  *                 type: string
  *                 example: +441234567890
  *               password:
@@ -25,7 +26,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 example: secretPass123
  *               role:
  *                 type: string
- *                 enum: [admin, truck, client]
+ *                 enum: [admin, driver, client]
  *                 example: client
  *     responses:
  *       201:
@@ -40,28 +41,27 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const registerUser = async (req, res, next) => {
   try {
-    const { username, phoneNo, password, role } = req.body;
-    const existingUser = await User.findOne({ phone: phoneNo });
+    const { user_name, phone, password, role } = req.body;
+    const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return next(new Error("Phone number already exists!"));
     }
 
-    const allowedRoles = ["admin", "truck", "client"];
+    const allowedRoles = ["admin", "driver", "client"];
     const userRole = role && allowedRoles.includes(role) ? role : "client";
 
     const newUser = new User({
-      user_name: username,
-      phone: phoneNo,
+      user_name,
+      phone,
       password,
       role: userRole,
     });
     await newUser.save();
-    const token = newUser.generateToken();
 
     sendSuccessResponse(
       res,
       "User registered successfully.",
-      { token, user_id: newUser._id },
+      { user_id: newUser._id },
       201
     );
   } catch (error) {

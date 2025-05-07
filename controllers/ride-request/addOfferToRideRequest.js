@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-
 /**
  * @swagger
  * /ride-request/add-offer:

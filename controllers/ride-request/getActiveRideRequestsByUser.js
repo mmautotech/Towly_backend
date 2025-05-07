@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-
 /**
  * @swagger
  * /fetch/ride-requests/active:
@@ -37,7 +36,7 @@ const getActiveRideRequestsByUser = async (req, res, next) => {
 
     const activeRequests = await RideRequest.find({
       user_id: new ObjectId(user_id),
-      status: { $nin: ["cleared", "cancelled"] },
+      status: { $nin: ["cancelled", "completed"] },
     }).select(
       "status origin_location dest_location vehicle_details pickup_date"
     );

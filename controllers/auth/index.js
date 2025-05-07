@@ -1,5 +1,10 @@
+// controllers/auth/index.js
+const registerUser = require("./registerUser");
+const loginUser = require("./loginUser");
+const forgotPassword = require("./forgotPassword");
+
 module.exports = {
-  registerUser: require("./registerUser"),
-  loginUser: require("./loginUser"),
-  forgotPassword: require("./forgotPassword"),
+  registerUser,
+  loginUser,
+  forgotPassword,
 };
