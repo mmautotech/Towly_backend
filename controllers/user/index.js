@@ -14,6 +14,10 @@ const { updateClientProfile } = require("./updateClientProfile");
 const { updateDriverProfile } = require("./updateDriverProfile");
 const { updateVehicleProfile } = require("./updateVehicleProfile");
 
+// these two export the function directly:
+const updateUserSetting = require("./updateUserSettings");
+const updateTruckSettings = require("./updateTruckSettings");
+
 module.exports = {
   updateUserLocation,
   updateUserRating,
@@ -23,4 +27,6 @@ module.exports = {
   updateDriverProfile,
   getVehicleProfile,
   updateVehicleProfile,
+  updateUserSetting,
+  updateTruckSettings,
 };

@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /ride-requests/completed:
@@ -21,9 +23,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  *       200:
  *         description: Completed ride requests returned
  */
-const getcompletedRide = async (req, res, next) => {
+const getCompletedRide = async (req, res, next) => {
   try {
-    const { user_id } = req.body; // Get user_id from the request body or authenticated session
+    const { user_id } = req.body; // Get user_id from the request body
     if (!user_id) return next(new Error("User ID is required."));
 
     // Query to find completed requests for the logged-in user
@@ -31,12 +33,12 @@ const getcompletedRide = async (req, res, next) => {
       user_id: user_id, // Filter by user_id
       status: "completed", // Filter for completed requests
     })
-      .populate("user_id", "user_name") // Populate the user details (if necessary)
+      .populate("user_id", "user_name") // Populate the user details
       .lean();
 
     const formatted = requests.map((r) => {
       const offer = (r.offers || []).find(
-        (o) => o.user_id.toString() === user_id
+        (o) => o.user_id && o.user_id.toString() === user_id
       );
 
       return {
@@ -47,7 +49,7 @@ const getcompletedRide = async (req, res, next) => {
         pickup_date: r.pickup_date,
         updatedAt: r.updatedAt,
         username: r.user_id?.user_name || "Unknown",
-        status: r.status, // Include the status field
+        status: r.status,
         offer: offer
           ? {
               offer_id: offer._id,
@@ -70,4 +72,5 @@ const getcompletedRide = async (req, res, next) => {
     next(error);
   }
 };
-module.exports = getcompletedRide;
+
+module.exports = getCompletedRide;

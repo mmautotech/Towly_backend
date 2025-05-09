@@ -10,6 +10,8 @@ const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
 const getAcceptedRide_postedRequests = require("./getAcceptedRideRequests");
 const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
 const getcompletedRide = require("./getCompletedRideRequest");
+const getCompletedRideTruck = require("./getCompletedRideRequestTruck");
+const getTrackingInfoByUser = require("./getTrackingInfoByUser");
 
 // Offers related
 const getOffersForRideRequest = require("./getOffersForRideRequest");
@@ -28,6 +30,8 @@ module.exports = {
   getAcceptedRide_postedRequests,
   getUnappliedRide_postedRequests,
   getcompletedRide,
+  getCompletedRideTruck,
+  getTrackingInfoByUser,
   // Offers related
   getOffersForRideRequest,
   getSingleTruckOffer,

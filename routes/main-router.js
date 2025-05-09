@@ -48,6 +48,8 @@ const {
   getAcceptedRide_postedRequests,
   getUnappliedRide_postedRequests,
   getcompletedRide,
+  getCompletedRideTruck,
+  getTrackingInfoByUser,
   // Offers related
   getOffersForRideRequest,
   getSingleTruckOffer,
@@ -63,8 +65,9 @@ const {
   updateDriverProfile,
   getVehicleProfile,
   updateVehicleProfile,
+  updateUserSetting,
+  updateTruckSettings,
 } = require("../controllers/user");
-const { get } = require("../models/user/image.schema");
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
 router.post("/auth/register", validateRequest(signup_schema), registerUser);
@@ -107,6 +110,8 @@ router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
 router.post("/ride-requests/new", getUnappliedRide_postedRequests);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
 router.post("/ride-requests/completed", getcompletedRide);
+router.post("/ride-requests/completedtruck", getCompletedRideTruck);
+router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
 router.post(
   "/ride-request/offers",
@@ -133,28 +138,29 @@ router.post(
 router.post("/user/update-location", updateUserLocation);
 router.post("/user/update-rating", updateUserRating);
 
+// ─── Client PROFILE ROUTES ────────────────────────────
+// GET Client profile
 router.get("/client/profile", protect, getClientProfile);
+// PATCH client profile (text + 1 images)
 router.patch(
   "/client/profile",
   protect,
-  upload.single("profile_photo"), // <-- handle multipart
+  upload.single("profile_photo"),
   validateRequest(update_client_profile_schema),
   updateClientProfile
 );
 
 // ─── TRUCK PROFILE ROUTES ────────────────────────────
 // GET driver profile
-// GET driver profile
 router.get("/driver/profile", protect, getDriverProfile);
-
 // PATCH driver profile (text + 3 images)
 router.patch(
   "/driver/profile",
   protect,
   upload.fields([
-    { name: "licenseFront", maxCount: 1 },
-    { name: "licenseBack", maxCount: 1 },
-    { name: "licenseSelfie", maxCount: 1 },
+    { name: "license_Front", maxCount: 1 },
+    { name: "license_Back", maxCount: 1 },
+    { name: "license_Selfie", maxCount: 1 },
   ]),
   validateRequest(update_driver_profile_schema),
   updateDriverProfile
@@ -162,19 +168,19 @@ router.patch(
 
 // ─── VEHICLE PROFILE ROUTES ─────────────────────────
 // GET vehicle profile
-router.get(
-  "/vehicle/profile",
-  protect,
-  getVehicleProfile // fetches via User.truckProfile.vehicleProfile :contentReference[oaicite:4]{index=4}:contentReference[oaicite:5]{index=5}
-);
-
+router.get("/vehicle/profile", protect, getVehicleProfile);
 // PATCH vehicle profile (1 image + text)
 router.patch(
   "/vehicle/profile",
   protect,
-  upload.single("vehiclePhoto"),
-  validateRequest(update_vehicle_profile_schema),
-  updateVehicleProfile // updates & reuses getVehicleProfile :contentReference[oaicite:6]{index=6}:contentReference[oaicite:7]{index=7}
+  upload.single("vehiclePhoto"), // use this middleware
+  validateRequest(update_vehicle_profile_schema), // optional
+  updateVehicleProfile
 );
+
+// ─── USER SETTINGS ROUTES ────────────────────────────
+router.post("/user/settings", updateUserSetting);
+// ─── USER SETTINGS ROUTES ────────────────────────────
+router.post("/user/settings/truck", updateTruckSettings);
 
 module.exports = router;
