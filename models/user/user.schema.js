@@ -7,6 +7,7 @@ const client_profile_schema = require("./clientProfile.schema");
 const driver_profile_schema = require("./driverProfile.schema");
 const vehicle_profile_schema = require("./vehicleProfile.schema");
 const geo_point_schema = require("./geoPoint.schema");
+const setting_schema = require("./setting.schema");
 
 const user_schema = new mongoose.Schema(
   {
@@ -51,30 +52,8 @@ const user_schema = new mongoose.Schema(
     },
 
     settings: {
-      language: {
-        type: String,
-        enum: ["English"],
-        default: "English",
-      },
-      currency: {
-        type: String,
-        enum: ["GBP", "USD", "Euro", "PKR"],
-        default: "GBP",
-      },
-      distance_unit: {
-        type: String,
-        enum: ["Miles", "Kilometers"],
-        default: "Miles",
-      },
-      time_format: {
-        type: String,
-        enum: ["24 Hour", "12 Hour"],
-        default: "24 Hour",
-      },
-      radius: {
-        type: String,
-        default: "25",
-      },
+      client_settings: { type: setting_schema, default: undefined },
+      truck_settings: { type: setting_schema, default: undefined },
     },
   },
   { timestamps: true, collection: "user_profiles" }

@@ -15,18 +15,27 @@ const { updateDriverProfile } = require("./updateDriverProfile");
 const { updateVehicleProfile } = require("./updateVehicleProfile");
 
 // these two export the function directly:
-const updateUserSetting = require("./updateUserSettings");
-const updateTruckSettings = require("./updateTruckSettings");
+const updateSettings = require("./updateSettings");
+const getSettings = require("./getSettings");
 
 module.exports = {
   updateUserLocation,
   updateUserRating,
+
+  // Profile Controllers
+
+  // these export object { getClientProfile, getDriverProfile, getVehicleProfile } so destructure:
   getClientProfile,
-  updateClientProfile,
   getDriverProfile,
-  updateDriverProfile,
   getVehicleProfile,
+
+  // these export object { updateClientProfile, updateDriverProfile, updateVehicleProfile}, so destructure:
+  updateDriverProfile,
+  updateClientProfile,
   updateVehicleProfile,
-  updateUserSetting,
-  updateTruckSettings,
+
+  // Settings Controllers
+  // these two export the function directly:
+  updateSettings, // updateSettings (Client and Driver)
+  getSettings, // getSettings (Client and Driver)
 };

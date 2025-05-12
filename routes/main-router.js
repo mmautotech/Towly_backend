@@ -65,8 +65,8 @@ const {
   updateDriverProfile,
   getVehicleProfile,
   updateVehicleProfile,
-  updateUserSetting,
-  updateTruckSettings,
+  updateSettings,
+  getSettings,
 } = require("../controllers/user");
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
@@ -178,9 +178,9 @@ router.patch(
   updateVehicleProfile
 );
 
-// ─── USER SETTINGS ROUTES ────────────────────────────
-router.post("/user/settings", updateUserSetting);
-// ─── USER SETTINGS ROUTES ────────────────────────────
-router.post("/user/settings/truck", updateTruckSettings);
+// ─── POST to update either truck_settings or client_settings ────────────
+router.post("/user/settings", updateSettings);
+// ─── GET to fetch truck_settings or client_settings ────────────────────────────
+router.get("/user/settings", getSettings);
 
 module.exports = router;
