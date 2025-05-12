@@ -140,10 +140,10 @@ router.post("/user/update-rating", updateUserRating);
 
 // ─── Client PROFILE ROUTES ────────────────────────────
 // GET Client profile
-router.get("/client/profile", protect, getClientProfile);
+router.get("/profile", protect, getClientProfile);
 // PATCH client profile (text + 1 images)
 router.patch(
-  "/client/profile",
+  "/profile",
   protect,
   upload.single("profile_photo"),
   validateRequest(update_client_profile_schema),
@@ -152,10 +152,10 @@ router.patch(
 
 // ─── TRUCK PROFILE ROUTES ────────────────────────────
 // GET driver profile
-router.get("/driver/profile", protect, getDriverProfile);
+router.get("/profile/driver", protect, getDriverProfile);
 // PATCH driver profile (text + 3 images)
 router.patch(
-  "/driver/profile",
+  "/profile/driver",
   protect,
   upload.fields([
     { name: "license_Front", maxCount: 1 },
@@ -168,10 +168,10 @@ router.patch(
 
 // ─── VEHICLE PROFILE ROUTES ─────────────────────────
 // GET vehicle profile
-router.get("/vehicle/profile", protect, getVehicleProfile);
+router.get("/profile/vehicle", protect, getVehicleProfile);
 // PATCH vehicle profile (1 image + text)
 router.patch(
-  "/vehicle/profile",
+  "/profile/vehicle",
   protect,
   upload.single("vehiclePhoto"), // use this middleware
   validateRequest(update_vehicle_profile_schema), // optional
@@ -179,8 +179,8 @@ router.patch(
 );
 
 // ─── POST to update either truck_settings or client_settings ────────────
-router.post("/user/settings", updateSettings);
+router.post("/settings", updateSettings);
 // ─── GET to fetch truck_settings or client_settings ────────────────────────────
-router.get("/user/settings", getSettings);
+router.get("/settings", getSettings);
 
 module.exports = router;

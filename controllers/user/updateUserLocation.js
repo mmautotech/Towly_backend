@@ -24,10 +24,13 @@ const sendSuccessResponse = require("../../utils/success-response");
  *             properties:
  *               user_id:
  *                 type: string
+ *                 description: MongoDB user ID
  *               longitude:
  *                 type: number
+ *                 description: Longitude of the user's current location
  *               latitude:
  *                 type: number
+ *                 description: Latitude of the user's current location
  *     responses:
  *       200:
  *         description: Location updated successfully
@@ -42,8 +45,24 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 message:
  *                   type: string
  *                   example: Location updated successfully.
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  *       400:
  *         description: Bad request – missing or invalid fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: user_id, longitude, and latitude are required
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal server error
  */
@@ -58,11 +77,24 @@ const updateUserLocation = async (req, res, next) => {
   }
 
   try {
-    await User.findByIdAndUpdate(user_id, {
-      geolocation: { type: "Point", coordinates: [longitude, latitude] },
-    });
+    const updated = await User.findByIdAndUpdate(
+      user_id,
+      { geo_location: { type: "Point", coordinates: [longitude, latitude] } },
+      { new: true }
+    );
 
-    sendSuccessResponse(res, "Location updated successfully.");
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Location updated successfully.",
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     next(error);
   }

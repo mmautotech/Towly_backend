@@ -1,4 +1,3 @@
-// models/user/user.schema.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -37,13 +36,24 @@ const user_schema = new mongoose.Schema(
       default: "client",
     },
 
-    client_profile: client_profile_schema,
+    // Optional embedded profile with no unique constraints
+    client_profile: {
+      type: client_profile_schema,
+      default: undefined,
+    },
     truck_profile: {
-      driver_profile: driver_profile_schema,
-      vehicle_profile: vehicle_profile_schema,
+      driver_profile: {
+        type: driver_profile_schema,
+        default: undefined,
+      },
+      vehicle_profile: {
+        type: vehicle_profile_schema,
+        default: undefined,
+      },
     },
 
     geo_location: geo_point_schema,
+
     rating: {
       type: Number,
       min: 0,
@@ -56,25 +66,35 @@ const user_schema = new mongoose.Schema(
       truck_settings: { type: setting_schema, default: undefined },
     },
   },
-  { timestamps: true, collection: "user_profiles" }
+  {
+    timestamps: true,
+    collection: "user_profiles",
+  }
 );
 
-// 2dsphere index on geo_location
+// ✅ Geospatial index for map queries
 user_schema.index({ geo_location: "2dsphere" });
 
+// ✅ Hash password before save
 user_schema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
+// ✅ Compare password method
 user_schema.methods.comparePassword = function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
+// ✅ JWT generation method
 user_schema.methods.generateToken = function () {
   return jwt.sign(
-    { id: this._id.toString(), phone: this.phone, role: this.role },
+    {
+      id: this._id.toString(),
+      phone: this.phone,
+      role: this.role,
+    },
     process.env.JWT_SECRET_KEY,
     { expiresIn: "1h" }
   );
