@@ -1,18 +1,23 @@
+// controllers/user/getDriverProfile.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const {
+  formatBase64Image,
+  formatDateString,
+} = require("../../utils/profile-helper");
 
 /**
  * @swagger
- * /driver/profile:
+ * /profile/driver:
  *   get:
- *     summary: Get authenticated driver's profile
+ *     summary: Retrieve the authenticated driver's profile
  *     tags:
  *       - Driver Profile
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Driver profile fetched
+ *         description: Driver profile fetched successfully
  *         content:
  *           application/json:
  *             schema:
@@ -20,10 +25,10 @@ const sendSuccessResponse = require("../../utils/success-response");
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: Driver profile fetched.
+ *                 timestamp:
+ *                   type: string
  *                 data:
  *                   type: object
  *                   properties:
@@ -63,32 +68,24 @@ exports.getDriverProfile = async (req, res, next) => {
 
     const dp = user.truck_profile?.driver_profile || {};
 
-    const toUrl = (field) =>
-      dp[field]?.data
-        ? `data:${dp[field].contentType};base64,${dp[field].data.toString(
-            "base64"
-          )}`
-        : null;
-
-    const formatDate = (date) =>
-      date
-        ? new Date(date)
-            .toISOString()
-            .split("T")[0]
-            .split("-")
-            .reverse()
-            .join("-")
-        : "";
-
     sendSuccessResponse(res, "Driver profile fetched.", {
       firstName: dp.first_name || "",
       lastName: dp.last_name || "",
-      dateOfBirth: formatDate(dp.date_of_birth),
+      dateOfBirth: formatDateString(dp.date_of_birth),
       licenseNumber: dp.license_number || "",
-      licenseExpiry: formatDate(dp.license_expiry),
-      licenseFront: toUrl("license_front"),
-      licenseBack: toUrl("license_back"),
-      licenseSelfie: toUrl("license_selfie"),
+      licenseExpiry: formatDateString(dp.license_expiry),
+      licenseFront: formatBase64Image(
+        dp.license_front?.data,
+        dp.license_front?.contentType
+      ),
+      licenseBack: formatBase64Image(
+        dp.license_back?.data,
+        dp.license_back?.contentType
+      ),
+      licenseSelfie: formatBase64Image(
+        dp.license_selfie?.data,
+        dp.license_selfie?.contentType
+      ),
     });
   } catch (err) {
     next(err);

@@ -1,11 +1,13 @@
+// controllers/user/getVehicleProfile.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const { formatBase64Image } = require("../../utils/profile-helper");
 
 /**
  * @swagger
- * /vehicle/profile:
+ * /profile/vehicle:
  *   get:
- *     summary: Get the authenticated driver's vehicle profile
+ *     summary: Retrieve the authenticated vehicle profile
  *     tags:
  *       - Vehicle Profile
  *     security:
@@ -20,26 +22,30 @@ const sendSuccessResponse = require("../../utils/success-response");
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: Vehicle profile fetched.
+ *                 timestamp:
+ *                   type: string
  *                 data:
  *                   type: object
  *                   properties:
- *                     registration_number:
- *                       type: string
  *                     make:
  *                       type: string
  *                     model:
  *                       type: string
- *                     color:
+ *                     year:
+ *                       type: string
+ *                     registration_number:
+ *                       type: string
+ *                     category:
+ *                       type: string
+ *                     wheels:
+ *                       type: string
+ *                     loaded:
  *                       type: string
  *                     vehiclePhoto:
  *                       type: string
- *                       description: Base64-encoded image (optional)
- *       404:
- *         description: User not found
+ *                       description: Base64 image string
  */
 exports.getVehicleProfile = async (req, res, next) => {
   try {
@@ -48,26 +54,25 @@ exports.getVehicleProfile = async (req, res, next) => {
     );
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const vp = user.truck_profile?.vehicle_profile || {};
 
-    const photoUrl = vp.vehicle_photo?.data
-      ? `data:${
-          vp.vehicle_photo.contentType
-        };base64,${vp.vehicle_photo.data.toString("base64")}`
-      : null;
-
     sendSuccessResponse(res, "Vehicle profile fetched.", {
-      registration_number: vp.registration_number || "",
       make: vp.make || "",
       model: vp.model || "",
-      color: vp.color || "",
-      vehiclePhoto: photoUrl,
+      year: vp.year || "",
+      registration_number: vp.registration_number || "",
+      category: vp.category || "",
+      wheels: vp.wheels || "",
+      loaded: vp.loaded || "",
+      vehiclePhoto: formatBase64Image(
+        vp.vehicle_photo?.data,
+        vp.vehicle_photo?.contentType
+      ),
     });
   } catch (err) {
     next(err);

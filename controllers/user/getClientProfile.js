@@ -1,12 +1,13 @@
 // controllers/user/getClientProfile.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const { formatBase64Image } = require("../../utils/profile-helper");
 
 /**
  * @swagger
- * /client/profile:
+ * /profile:
  *   get:
- *     summary: Retrieve the authenticated client's profile and phone
+ *     summary: Retrieve the authenticated client's profile
  *     tags:
  *       - Client Profile
  *     security:
@@ -24,10 +25,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Profile fetched successfully.
  *                 timestamp:
  *                   type: string
- *                   format: date-time
  *                 data:
  *                   type: object
  *                   properties:
@@ -45,6 +44,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                       type: string
  *                     profile_photo:
  *                       type: string
+ *                       description: Base64 image string
  */
 exports.getClientProfile = async (req, res, next) => {
   try {
@@ -53,19 +53,12 @@ exports.getClientProfile = async (req, res, next) => {
     );
 
     if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     const profile = client.client_profile || {};
-
-    let photoUrl = "";
-    if (profile.profile_photo?.data) {
-      const b64 = profile.profile_photo.data.toString("base64");
-      photoUrl = `data:${profile.profile_photo.contentType};base64,${b64}`;
-    }
 
     sendSuccessResponse(res, "Profile fetched successfully.", {
       user_id: client._id,
@@ -74,7 +67,10 @@ exports.getClientProfile = async (req, res, next) => {
       last_name: profile.last_name || "",
       email: profile.email || "",
       address: profile.address || "",
-      profile_photo: photoUrl,
+      profile_photo: formatBase64Image(
+        profile.profile_photo?.data,
+        profile.profile_photo?.contentType
+      ),
     });
   } catch (err) {
     next(err);

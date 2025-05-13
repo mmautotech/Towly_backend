@@ -47,8 +47,8 @@ const {
   getAppliedRide_postedRequests,
   getAcceptedRide_postedRequests,
   getUnappliedRide_postedRequests,
-  getcompletedRide,
-  getCompletedRideTruck,
+  getHistoryClient,
+  getHistoryTruck,
   getTrackingInfoByUser,
   // Offers related
   getOffersForRideRequest,
@@ -57,6 +57,7 @@ const {
   addCounterOfferToRideRequest,
 } = require("../controllers/ride-request");
 const {
+  getBasicUserInfo,
   updateUserLocation,
   updateUserRating,
   getClientProfile,
@@ -109,8 +110,6 @@ router.post("/ride-requests/applied", getAppliedRide_postedRequests);
 router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
 router.post("/ride-requests/new", getUnappliedRide_postedRequests);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
-router.post("/ride-requests/completed", getcompletedRide);
-router.post("/ride-requests/completedtruck", getCompletedRideTruck);
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
 router.post(
@@ -135,6 +134,7 @@ router.post(
 );
 
 // ─── USER ROUTES (NEW) ────────────────────────────────────
+router.post("/user", protect, getBasicUserInfo);
 router.post("/user/update-location", updateUserLocation);
 router.post("/user/update-rating", updateUserRating);
 
@@ -178,9 +178,14 @@ router.patch(
   updateVehicleProfile
 );
 
+// ─── Settings ROUTES ("/settings")─────────────────────────
 // ─── POST to update either truck_settings or client_settings ────────────
 router.post("/settings", updateSettings);
 // ─── GET to fetch truck_settings or client_settings ────────────────────────────
 router.get("/settings", getSettings);
+
+// ─── History ROUTES ("/history")─────────────────────────
+router.post("/ride-requests/history", getHistoryClient);
+router.post("/ride-requests/history/truck", getHistoryTruck);
 
 module.exports = router;

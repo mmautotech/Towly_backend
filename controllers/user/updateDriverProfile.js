@@ -1,12 +1,17 @@
+// controllers/user/updateDriverProfile.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-const { getDriverProfile } = require("./getDriverProfile");
+const {
+  updateProfileFields,
+  formatBase64Image,
+  formatDateString,
+} = require("../../utils/profile-helper");
 
 /**
  * @swagger
- * /driver/profile:
+ * /profile/driver:
  *   patch:
- *     summary: Update driver's profile
+ *     summary: Update the authenticated driver's profile
  *     tags:
  *       - Driver Profile
  *     security:
@@ -26,12 +31,10 @@ const { getDriverProfile } = require("./getDriverProfile");
  *                 type: string
  *               date_of_birth:
  *                 type: string
- *                 example: "12-12-1996"
- *                 description: Must be DD-MM-YYYY
+ *                 example: "12-12-1990"
  *               license_expiry:
  *                 type: string
- *                 example: "12-12-2031"
- *                 description: Must be DD-MM-YYYY
+ *                 example: "12-12-2030"
  *               license_Front:
  *                 type: string
  *                 format: binary
@@ -43,60 +46,45 @@ const { getDriverProfile } = require("./getDriverProfile");
  *                 format: binary
  *     responses:
  *       200:
- *         description: Profile updated and returned
+ *         description: Driver profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     licenseNumber:
+ *                       type: string
+ *                     dateOfBirth:
+ *                       type: string
+ *                     licenseExpiry:
+ *                       type: string
+ *                     licenseFront:
+ *                       type: string
+ *                     licenseBack:
+ *                       type: string
+ *                     licenseSelfie:
+ *                       type: string
  */
 exports.updateDriverProfile = async (req, res, next) => {
   try {
-    const updates = {};
-    const body = req.body;
-
-    // Required fields
-    if (body.first_name)
-      updates["truck_profile.driver_profile.first_name"] = body.first_name;
-    if (body.last_name)
-      updates["truck_profile.driver_profile.last_name"] = body.last_name;
-    if (body.license_number)
-      updates["truck_profile.driver_profile.license_number"] =
-        body.license_number;
-
-    // Convert DD-MM-YYYY → Date with 00:00 UTC
-    if (body.date_of_birth) {
-      const [d, m, y] = body.date_of_birth.split("-");
-      const dob = new Date(`${y}-${m}-${d}`);
-      if (!isNaN(dob)) {
-        dob.setUTCHours(0, 0, 0, 0);
-        updates["truck_profile.driver_profile.date_of_birth"] = dob;
-      }
-    }
-
-    if (body.license_expiry) {
-      const [d, m, y] = body.license_expiry.split("-");
-      const exp = new Date(`${y}-${m}-${d}`);
-      if (!isNaN(exp)) {
-        exp.setUTCHours(0, 0, 0, 0);
-        updates["truck_profile.driver_profile.license_expiry"] = exp;
-      }
-    }
-
-    // Optional images
-    if (req.files?.license_Front?.[0]) {
-      updates["truck_profile.driver_profile.license_front"] = {
-        data: req.files.license_Front[0].buffer,
-        contentType: req.files.license_Front[0].mimetype,
-      };
-    }
-    if (req.files?.license_Back?.[0]) {
-      updates["truck_profile.driver_profile.license_back"] = {
-        data: req.files.license_Back[0].buffer,
-        contentType: req.files.license_Back[0].mimetype,
-      };
-    }
-    if (req.files?.license_Selfie?.[0]) {
-      updates["truck_profile.driver_profile.license_selfie"] = {
-        data: req.files.license_Selfie[0].buffer,
-        contentType: req.files.license_Selfie[0].mimetype,
-      };
-    }
+    const updates = updateProfileFields("driver", req.body, {
+      license_Front: req.files?.license_Front?.[0],
+      license_Back: req.files?.license_Back?.[0],
+      license_Selfie: req.files?.license_Selfie?.[0],
+    });
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -104,13 +92,27 @@ exports.updateDriverProfile = async (req, res, next) => {
       { new: true }
     );
 
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
+    const dp = user?.truck_profile?.driver_profile || {};
 
-    return getDriverProfile(req, res, next);
+    sendSuccessResponse(res, "Driver profile updated.", {
+      firstName: dp.first_name || "",
+      lastName: dp.last_name || "",
+      licenseNumber: dp.license_number || "",
+      dateOfBirth: formatDateString(dp.date_of_birth),
+      licenseExpiry: formatDateString(dp.license_expiry),
+      licenseFront: formatBase64Image(
+        dp.license_front?.data,
+        dp.license_front?.contentType
+      ),
+      licenseBack: formatBase64Image(
+        dp.license_back?.data,
+        dp.license_back?.contentType
+      ),
+      licenseSelfie: formatBase64Image(
+        dp.license_selfie?.data,
+        dp.license_selfie?.contentType
+      ),
+    });
   } catch (err) {
     next(err);
   }

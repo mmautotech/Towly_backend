@@ -1,12 +1,16 @@
+// controllers/user/updateVehicleProfile.js
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
-const { getVehicleProfile } = require("./getVehicleProfile");
+const {
+  updateProfileFields,
+  formatBase64Image,
+} = require("../../utils/profile-helper");
 
 /**
  * @swagger
- * /vehicle/profile:
+ * /profile/vehicle:
  *   patch:
- *     summary: Update the authenticated driver's vehicle profile
+ *     summary: Update the authenticated vehicle profile
  *     tags:
  *       - Vehicle Profile
  *     security:
@@ -18,13 +22,19 @@ const { getVehicleProfile } = require("./getVehicleProfile");
  *           schema:
  *             type: object
  *             properties:
- *               registration_number:
- *                 type: string
  *               make:
  *                 type: string
  *               model:
  *                 type: string
- *               color:
+ *               year:
+ *                 type: string
+ *               registration_number:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               wheels:
+ *                 type: string
+ *               loaded:
  *                 type: string
  *               vehiclePhoto:
  *                 type: string
@@ -39,32 +49,35 @@ const { getVehicleProfile } = require("./getVehicleProfile");
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
+ *                   type: string
+ *                 timestamp:
  *                   type: string
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     make:
+ *                       type: string
+ *                     model:
+ *                       type: string
+ *                     year:
+ *                       type: string
+ *                     registration_number:
+ *                       type: string
+ *                     category:
+ *                       type: string
+ *                     wheels:
+ *                       type: string
+ *                     loaded:
+ *                       type: string
+ *                     vehiclePhoto:
+ *                       type: string
  */
 exports.updateVehicleProfile = async (req, res, next) => {
   try {
-    const updates = {};
-    const body = req.body;
-
-    // Match Mongoose schema field names (snake_case)
-    if (body.registration_number)
-      updates["truck_profile.vehicle_profile.registration_number"] =
-        body.registration_number;
-    if (body.make) updates["truck_profile.vehicle_profile.make"] = body.make;
-    if (body.model) updates["truck_profile.vehicle_profile.model"] = body.model;
-    if (body.color) updates["truck_profile.vehicle_profile.color"] = body.color;
-
-    // Optional image
-    if (req.file) {
-      updates["truck_profile.vehicle_profile.vehicle_photo"] = {
-        data: req.file.buffer,
-        contentType: req.file.mimetype,
-      };
-    }
+    const updates = updateProfileFields("vehicle", req.body, {
+      vehiclePhoto: req.file,
+    });
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -72,14 +85,21 @@ exports.updateVehicleProfile = async (req, res, next) => {
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    const vp = user?.truck_profile?.vehicle_profile || {};
 
-    return getVehicleProfile(req, res, next);
+    sendSuccessResponse(res, "Vehicle profile updated.", {
+      make: vp.make || "",
+      model: vp.model || "",
+      year: vp.year || "",
+      registration_number: vp.registration_number || "",
+      category: vp.category || "",
+      wheels: vp.wheels || "",
+      loaded: vp.loaded || "",
+      vehiclePhoto: formatBase64Image(
+        vp.vehicle_photo?.data,
+        vp.vehicle_photo?.contentType
+      ),
+    });
   } catch (err) {
     next(err);
   }

@@ -9,8 +9,8 @@ const getNearbyRideRequests = require("./getNearbyRideRequests");
 const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
 const getAcceptedRide_postedRequests = require("./getAcceptedRideRequests");
 const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
-const getcompletedRide = require("./getCompletedRideRequest");
-const getCompletedRideTruck = require("./getCompletedRideRequestTruck");
+const getHistoryClient = require("./getHistoryClient");
+const getHistoryTruck = require("./getHistoryTruck");
 const getTrackingInfoByUser = require("./getTrackingInfoByUser");
 
 // Offers related
@@ -29,8 +29,8 @@ module.exports = {
   getAppliedRide_postedRequests,
   getAcceptedRide_postedRequests,
   getUnappliedRide_postedRequests,
-  getcompletedRide,
-  getCompletedRideTruck,
+  getHistoryClient,
+  getHistoryTruck,
   getTrackingInfoByUser,
   // Offers related
   getOffersForRideRequest,
