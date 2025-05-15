@@ -35,7 +35,10 @@ const getAppliedRide_postedRequests = async (req, res, next) => {
       status: "posted",
       "offers.truck_id": truckObjectId,
     })
-      .populate("user_id", "user_name")
+      .populate(
+        "user_id",
+        "user_name client_profile.first_name client_profile.last_name client_profile.profile_photo"
+      )
       .lean();
 
     // For each request, pick only the matching offer
