@@ -6,6 +6,7 @@ const router = express.Router();
 const protect = require("../middlewares/auth-middleware");
 const validateRequest = require("../middlewares/validator-middleware");
 const upload = require("../middlewares/upload-middleware");
+const authenticateToken = require("../middlewares/authenticateToken");
 
 // ─── VALIDATORS ────────────────────────────────────────────
 const {
@@ -58,6 +59,7 @@ const {
 } = require("../controllers/ride-request");
 const {
   getBasicUserInfo,
+  getBasicTruckInfo,
   updateUserLocation,
   updateUserRating,
   getClientProfile,
@@ -114,6 +116,7 @@ router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
 router.post(
   "/ride-request/offers",
+  authenticateToken,
   validateRequest(get_offers_schema),
   getOffersForRideRequest
 );
@@ -135,6 +138,7 @@ router.post(
 
 // ─── USER ROUTES (NEW) ────────────────────────────────────
 router.post("/user", protect, getBasicUserInfo);
+router.get("/truck", authenticateToken, getBasicTruckInfo);
 router.post("/user/update-location", updateUserLocation);
 router.post("/user/update-rating", updateUserRating);
 

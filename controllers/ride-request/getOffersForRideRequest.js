@@ -1,26 +1,26 @@
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
+
 /**
  * @swagger
  * /ride-request/offers:
  *   post:
- *     summary: Get all offers for a specific ride request
+ *     summary: Get all offers for a specific ride request (auth required)
  *     tags: [RideRequest]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, request_id]
+ *             required: [request_id]
  *             properties:
- *               user_id:
- *                 type: string
- *                 example: "6809df40e39801f2e976d94b"
  *               request_id:
  *                 type: string
- *                 example: "680a484be39801f2e976da3b"
+ *                 example: "68245049f698874779869a3f"
  *     responses:
  *       200:
  *         description: List of enriched offers retrieved successfully
@@ -45,7 +45,10 @@ const { RideRequest } = require("../../models");
  *                         example: "646a2a56e8414e38700a3627"
  *                       truck_username:
  *                         type: string
- *                         example: "Waqas"
+ *                         example: "Ford Focus"
+ *                       truck_photo:
+ *                         type: string
+ *                         example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
  *                       truck_location:
  *                         type: array
  *                         items:
@@ -68,42 +71,90 @@ const { RideRequest } = require("../../models");
  *                         type: number
  *                         nullable: true
  *                         example: 8500
+ *       401:
+ *         description: Unauthorized (no or invalid token)
+ *       404:
+ *         description: Ride request not found
+ *       500:
+ *         description: Server error
  */
+
 const getOffersForRideRequest = async (req, res, next) => {
   try {
-    const { user_id, request_id } = req.body;
+    const user_id = req.user.id; // ✅ From JWT
+    const { request_id } = req.body;
 
-    if (!user_id || !request_id) {
-      return next(new Error("user_id and request_id are required."));
+    if (!request_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Request ID is required.",
+      });
     }
 
     const request = await RideRequest.findOne({
       _id: new ObjectId(request_id),
       user_id: new ObjectId(user_id),
-    }).populate("offers.truck_id", "user_name geolocation rating");
+    }).populate(
+      "offers.truck_id",
+      "user_name rating geolocation truck_profile"
+    );
 
     if (!request) {
-      return next(new Error("Ride request not found."));
+      return res.status(404).json({
+        success: false,
+        message: "Ride request not found.",
+      });
     }
 
-    const formattedOffers = (request.offers || []).map((offer) => ({
-      offer_id: offer._id.toString(),
-      truck_username: offer.truck_id?.user_name || "Unknown",
-      truck_location: offer.truck_id?.geolocation?.coordinates || [0, 0],
-      truck_rating: offer.truck_id?.rating ?? null,
-      offered_price: offer.offered_price,
-      time_to_reach: offer.time_to_reach,
-      offer_updated_at: offer.updatedAt || null,
-      client_counter_price: offer.client_counter_price ?? null,
-    }));
+    const offers = (request.offers || []).map((offer) => {
+      const truck = offer.truck_id;
+      const truck_profile = truck?.truck_profile;
+      const driver_profile = truck_profile?.driver_profile;
+      const vehicle_profile = truck_profile?.vehicle_profile;
+
+      let name = truck?.user_name || "Unknown";
+      let profile_photo = "";
+
+      if (vehicle_profile?.make && vehicle_profile?.model) {
+        name = `${vehicle_profile.make} ${vehicle_profile.model}`;
+      } else if (driver_profile?.first_name && driver_profile?.last_name) {
+        name = `${driver_profile.first_name} ${driver_profile.last_name}`;
+      }
+
+      if (vehicle_profile?.vehicle_photo?.data) {
+        profile_photo = `data:${
+          vehicle_profile.vehicle_photo.content_type
+        };base64,${vehicle_profile.vehicle_photo.data.toString("base64")}`;
+      } else if (driver_profile?.license_selfie?.data) {
+        profile_photo = `data:${
+          driver_profile.license_selfie.content_type
+        };base64,${driver_profile.license_selfie.data.toString("base64")}`;
+      }
+
+      return {
+        offer_id: offer._id.toString(),
+        truck_username: name,
+        truck_photo: profile_photo,
+        truck_location: truck?.geolocation?.coordinates || [0, 0],
+        truck_rating: truck?.rating ?? null,
+        offered_price: offer.offered_price,
+        time_to_reach: offer.time_to_reach,
+        offer_updated_at: offer.updatedAt || null,
+        client_counter_price: offer.client_counter_price ?? null,
+      };
+    });
 
     return res.status(200).json({
       success: true,
       message: "Offers retrieved successfully.",
-      offers: formattedOffers,
+      offers,
     });
   } catch (error) {
-    return next(error);
+    console.error("Error in getOffersForRideRequest:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 

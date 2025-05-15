@@ -55,8 +55,7 @@ const accept_ride_schema = post_ride_schema.extend({
 const cancel_ride_schema = post_ride_schema;
 
 const get_offers_schema = z.object({
-  user_id: z.string().min(1),
-  request_id: z.string().min(1),
+  request_id: z.string().length(24),
 });
 
 const get_single_truck_offer_schema = z.object({

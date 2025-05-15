@@ -1,6 +1,7 @@
 // controllers/user/index.js
 
 const { getBasicUserInfo } = require("./getBasicUserInfo");
+const { getBasicTruckInfo } = require("./getBasicTruckInfo");
 
 // these two export the function directly:
 const updateUserLocation = require("./updateUserLocation");
@@ -22,6 +23,7 @@ const getSettings = require("./getSettings");
 
 module.exports = {
   getBasicUserInfo,
+  getBasicTruckInfo,
   // User Controllers
   updateUserLocation,
   updateUserRating,
