@@ -60,8 +60,9 @@ const {
 const {
   getBasicUserInfo,
   getBasicTruckInfo,
-  updateUserLocation,
-  updateUserRating,
+  UpdateRatingClient,
+  UpdateRatingVehicle,
+  UpdateLocationVehicle,
   getClientProfile,
   updateClientProfile,
   getDriverProfile,
@@ -108,9 +109,17 @@ router.post(
   getActiveRideRequestsByUser
 );
 
-router.post("/ride-requests/applied", getAppliedRide_postedRequests);
+router.post(
+  "/ride-requests/applied",
+  authenticateToken,
+  getAppliedRide_postedRequests
+);
 router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
-router.post("/ride-requests/new", getUnappliedRide_postedRequests);
+router.post(
+  "/ride-requests/new",
+  authenticateToken,
+  getUnappliedRide_postedRequests
+);
 router.post("/ride-requests/nearby", getNearbyRideRequests);
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
@@ -137,18 +146,27 @@ router.post(
 );
 
 // ─── USER ROUTES (NEW) ────────────────────────────────────
+// Basic info
 router.post("/user", protect, getBasicUserInfo);
 router.get("/truck", authenticateToken, getBasicTruckInfo);
-router.post("/user/update-location", updateUserLocation);
-router.post("/user/update-rating", updateUserRating);
 
+// Ratings
+router.post("/client/update-rating", authenticateToken, UpdateRatingClient);
+router.post("/vehicle/update-rating", authenticateToken, UpdateRatingVehicle);
+
+// Location
+router.post(
+  "/vehicle/update-location",
+  authenticateToken,
+  UpdateLocationVehicle
+);
 // ─── Client PROFILE ROUTES ────────────────────────────
 // GET Client profile
-router.get("/profile", protect, getClientProfile);
+router.get("/profile", authenticateToken, getClientProfile);
 // PATCH client profile (text + 1 images)
 router.patch(
   "/profile",
-  protect,
+  authenticateToken,
   upload.single("profile_photo"),
   validateRequest(update_client_profile_schema),
   updateClientProfile

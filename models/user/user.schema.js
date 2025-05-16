@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 const client_profile_schema = require("./clientProfile.schema");
 const driver_profile_schema = require("./driverProfile.schema");
 const vehicle_profile_schema = require("./vehicleProfile.schema");
-const geo_point_schema = require("./geoPoint.schema");
 const setting_schema = require("./setting.schema");
 
 const user_schema = new mongoose.Schema(
@@ -51,16 +50,6 @@ const user_schema = new mongoose.Schema(
         default: undefined,
       },
     },
-
-    geo_location: geo_point_schema,
-
-    rating: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
-    },
-
     settings: {
       client_settings: { type: setting_schema, default: undefined },
       truck_settings: { type: setting_schema, default: undefined },
@@ -71,9 +60,6 @@ const user_schema = new mongoose.Schema(
     collection: "user_profiles",
   }
 );
-
-// ✅ Geospatial index for map queries
-user_schema.index({ geo_location: "2dsphere" });
 
 // ✅ Hash password before save
 user_schema.pre("save", async function (next) {

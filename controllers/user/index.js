@@ -4,8 +4,9 @@ const { getBasicUserInfo } = require("./getBasicUserInfo");
 const { getBasicTruckInfo } = require("./getBasicTruckInfo");
 
 // these two export the function directly:
-const updateUserLocation = require("./updateUserLocation");
-const updateUserRating = require("./updateUserRating");
+const UpdateRatingClient = require("./UpdateRatingClient");
+const UpdateRatingVehicle = require("./UpdateRatingVehicle");
+const UpdateLocationVehicle = require("./UpdateLocationVehicle");
 
 // these export object { getClientProfile, getDriverProfile, getVehicleProfile } so destructure:
 const { getClientProfile } = require("./getClientProfile");
@@ -25,8 +26,9 @@ module.exports = {
   getBasicUserInfo,
   getBasicTruckInfo,
   // User Controllers
-  updateUserLocation,
-  updateUserRating,
+  UpdateRatingClient,
+  UpdateRatingVehicle,
+  UpdateLocationVehicle,
 
   // Profile Controllers
 

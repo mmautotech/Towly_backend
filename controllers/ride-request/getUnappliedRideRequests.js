@@ -1,24 +1,18 @@
-// controllers/ride-request/getUnappliedRideRequests.js
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /ride-requests/new:
  *   post:
  *     summary: Get ride requests that the truck has NOT yet applied to
  *     tags: [RideRequest]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [truck_id]
- *             properties:
- *               truck_id:
- *                 type: string
+ *       required: false
  *     responses:
  *       200:
  *         description: New (unapplied) ride requests returned
@@ -30,6 +24,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 success:
  *                   type: boolean
  *                 message:
+ *                   type: string
+ *                 timestamp:
  *                   type: string
  *                 data:
  *                   type: array
@@ -46,23 +42,22 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                         $ref: '#/components/schemas/Vehicle'
  *                       pickup_date:
  *                         type: string
- *                         format: date-time
  *                       updatedAt:
  *                         type: string
- *                         format: date-time
  *                       username:
  *                         type: string
+ *                         example: "Waqas Ahmed"
+ *                       user_photo:
+ *                         type: string
+ *                         example: "data:image/jpeg;base64,/9j/..."
  */
+
 const getUnappliedRide_postedRequests = async (req, res, next) => {
   try {
-    const { truck_id } = req.body;
-    if (!truck_id) {
-      return next(new Error("truck_id is required."));
-    }
-
+    const truck_id = req.user.id; // ✅ Get from JWT
     const truckObjectId = new ObjectId(truck_id);
 
-    // Find all requests with status "posted" where this truck has NOT yet applied
+    // Find all "posted" requests this truck hasn't applied to
     const requests = await RideRequest.find({
       status: "posted",
       offers: {
@@ -73,19 +68,36 @@ const getUnappliedRide_postedRequests = async (req, res, next) => {
         },
       },
     })
-      .populate("user_id", "user_name")
+      .populate(
+        "user_id",
+        "user_name client_profile.first_name client_profile.last_name client_profile.profile_photo"
+      )
       .lean();
 
-    // Map to only the request details — drop other trucks' offers
-    const formatted = requests.map((r) => ({
-      request_id: r._id,
-      origin_location: r.origin_location,
-      dest_location: r.dest_location,
-      vehicle_details: r.vehicle_details,
-      pickup_date: r.pickup_date,
-      updatedAt: r.updatedAt,
-      username: r.user_id?.user_name || "Unknown",
-    }));
+    const formatted = requests.map((r) => {
+      const profile = r.user_id?.client_profile || {};
+      const fullName = `${profile.first_name || ""} ${
+        profile.last_name || ""
+      }`.trim();
+      const username = fullName || r.user_id?.user_name || "Unknown";
+
+      let user_photo = "";
+      if (profile.profile_photo?.data) {
+        const b64 = profile.profile_photo.data.toString("base64");
+        user_photo = `data:${profile.profile_photo.contentType};base64,${b64}`;
+      }
+
+      return {
+        request_id: r._id,
+        origin_location: r.origin_location,
+        dest_location: r.dest_location,
+        vehicle_details: r.vehicle_details,
+        pickup_date: r.pickup_date,
+        updatedAt: r.updatedAt,
+        username,
+        user_photo,
+      };
+    });
 
     return sendSuccessResponse(res, "New (unapplied) ride requests", formatted);
   } catch (error) {
