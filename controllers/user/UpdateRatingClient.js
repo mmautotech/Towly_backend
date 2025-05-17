@@ -1,4 +1,5 @@
 // controllers/user/UpdateRatingClient.js
+
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -6,8 +7,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  * @swagger
  * /client/update-rating:
  *   post:
- *     summary: Update client profile's rating using aggregation
- *     tags: [User]
+ *     summary: Truck updates a client's rating via aggregation
+ *     tags:
+ *       - User
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -16,63 +18,79 @@ const sendSuccessResponse = require("../../utils/success-response");
  *         application/json:
  *           schema:
  *             type: object
- *             required: [rating]
+ *             required:
+ *               - client_id
+ *               - rating
  *             properties:
+ *               client_id:
+ *                 type: string
+ *                 description: The user_id of the client to be rated
  *               rating:
  *                 type: number
  *                 minimum: 0
  *                 maximum: 5
- *               client_profile:
- *                 type: object
- *                 description: Include email or name to verify client identity
  *     responses:
  *       200:
- *         description: Client rating updated using aggregation
+ *         description: Client rating updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Client rating updated successfully.
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 const UpdateRatingClient = async (req, res, next) => {
   try {
-    const { rating, client_profile = {} } = req.body;
-    const user_id = req.user.id;
+    const { client_id, rating } = req.body;
+    const raterTruckId = req.user.id;
 
+    // Validate inputs
+    if (!client_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "client_id is required." });
+    }
+    if (!rating) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rating is required." });
+    }
     if (typeof rating !== "number" || rating < 0 || rating > 5) {
       return res
         .status(400)
         .json({ success: false, message: "Rating must be between 0 and 5." });
     }
 
-    const user = await User.findById(user_id);
-    if (!user?.client_profile) {
+    // Fetch the target client
+    const clientUser = await User.findById(client_id);
+    if (!clientUser?.client_profile) {
       return res
         .status(404)
-        .json({ success: false, message: "Client profile not found." });
+        .json({ success: false, message: "Client not found." });
     }
 
-    // Optional verification by email or full name
-    if (
-      (client_profile.email &&
-        user.client_profile.email !== client_profile.email) ||
-      (client_profile.first_name &&
-        client_profile.last_name &&
-        (user.client_profile.first_name !== client_profile.first_name ||
-          user.client_profile.last_name !== client_profile.last_name))
-    ) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Client identity mismatch." });
-    }
+    // Compute new aggregated rating
+    const currentRating = clientUser.client_profile.rating || 0;
+    const currentCount = clientUser.client_profile.ratings_count || 0;
+    const newCount = currentCount + 1;
+    const newRating = (currentRating * currentCount + rating) / newCount;
 
-    const { rating: currentRating = 0, ratings_count = 0 } =
-      user.client_profile;
+    // Update and save
+    clientUser.client_profile.rating = parseFloat(newRating.toFixed(2));
+    clientUser.client_profile.ratings_count = newCount;
+    clientUser.markModified("client_profile");
+    await clientUser.save();
 
-    const newCount = ratings_count + 1;
-    const newRating = (currentRating * ratings_count + rating) / newCount;
-
-    user.client_profile.rating = parseFloat(newRating.toFixed(2));
-    user.client_profile.ratings_count = newCount;
-
-    await user.save();
-
-    sendSuccessResponse(res, "Client rating updated via aggregation.");
+    // Only return status/message/timestamp
+    return sendSuccessResponse(res, "Client rating updated successfully.");
   } catch (err) {
     next(err);
   }

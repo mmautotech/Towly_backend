@@ -1,6 +1,6 @@
 // controllers/user/updateClientProfile.js
-
 const { User } = require("../../models");
+const sharp = require("sharp");
 
 /**
  * @swagger
@@ -11,7 +11,8 @@ const { User } = require("../../models");
  *       Update the authenticated client's profile fields.
  *       **First‐time setup:** `first_name`, `last_name` and `email` are required.
  *       **Subsequent updates:** any subset of profile fields may be provided.
- *       Returns only status, message, and timestamp (no profile data).
+ *       Stores both the original upload and a compressed version of any
+ *       profile photo under `client_profile.profile_photo`.
  *     tags:
  *       - Client Profile
  *     security:
@@ -47,7 +48,7 @@ const { User } = require("../../models");
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Profile fetched successfully.
+ *                   example: Profile updated successfully.
  *                 timestamp:
  *                   type: string
  *                   format: date-time
@@ -72,46 +73,58 @@ exports.updateClientProfile = async (req, res, next) => {
       !user.client_profile.first_name &&
       !user.client_profile.last_name &&
       !user.client_profile.email;
-
     if (isInitialSetup) {
       const missing = [];
       if (!req.body.first_name) missing.push("first_name");
       if (!req.body.last_name) missing.push("last_name");
       if (!req.body.email) missing.push("email");
-
       if (missing.length) {
         return res.status(400).json({
           success: false,
-          message: `Missing required fields for initial profile setup: ${missing.join(
+          message: `Missing required fields for initial setup: ${missing.join(
             ", "
           )}`,
         });
       }
     }
 
-    // 4) Apply any provided updates
+    // 4) Apply any provided text updates
     const { first_name, last_name, email, address } = req.body;
     if (first_name !== undefined) user.client_profile.first_name = first_name;
     if (last_name !== undefined) user.client_profile.last_name = last_name;
     if (email !== undefined) user.client_profile.email = email;
     if (address !== undefined) user.client_profile.address = address;
 
-    // 5) Handle optional photo upload
+    // 5) Handle optional photo upload: store both original + compressed
     if (req.file && req.file.buffer) {
-      user.client_profile.profile_photo = {
+      // store original
+      const original = {
         data: req.file.buffer,
         contentType: req.file.mimetype,
       };
+
+      // generate a small JPEG at width=200px
+      const compressedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 200 })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+      const compressed = {
+        data: compressedBuffer,
+        contentType: "image/jpeg",
+      };
+
+      user.client_profile.profile_photo = { original, compressed };
     }
 
-    // 6) Mark nested doc as modified & save
+    // 6) Mark nested doc modified & save
     user.markModified("client_profile");
     await user.save();
 
     // 7) Return only status, message, timestamp
     return res.status(200).json({
       success: true,
-      message: "Profile fetched successfully.",
+      message: "Client profile updated successfully.",
       timestamp: new Date().toISOString(),
     });
   } catch (err) {

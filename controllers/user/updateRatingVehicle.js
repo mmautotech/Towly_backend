@@ -1,4 +1,5 @@
 // controllers/user/UpdateRatingVehicle.js
+
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
@@ -6,8 +7,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  * @swagger
  * /vehicle/update-rating:
  *   post:
- *     summary: Update vehicle rating using aggregation
- *     tags: [User]
+ *     summary: Authenticated user updates another user's vehicle rating via aggregation
+ *     tags:
+ *       - User
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -16,61 +18,77 @@ const sendSuccessResponse = require("../../utils/success-response");
  *         application/json:
  *           schema:
  *             type: object
- *             required: [rating]
+ *             required:
+ *               - vehicle_id
+ *               - rating
  *             properties:
+ *               vehicle_id:
+ *                 type: string
+ *                 description: The user_id of the vehicle owner whose rating is to be updated
  *               rating:
  *                 type: number
  *                 minimum: 0
  *                 maximum: 5
- *               vehicle_profile:
- *                 type: object
- *                 description: Include make, model, or reg number to verify identity
  *     responses:
  *       200:
- *         description: Vehicle rating updated using aggregation
+ *         description: Vehicle rating updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Vehicle rating updated successfully.
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 const UpdateRatingVehicle = async (req, res, next) => {
   try {
-    const { rating, vehicle_profile = {} } = req.body;
-    const user_id = req.user.id;
+    const { vehicle_id, rating } = req.body;
+    const raterId = req.user.id;
 
+    // Validate inputs
+    if (!vehicle_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "vehicle_id is required." });
+    }
     if (typeof rating !== "number" || rating < 0 || rating > 5) {
       return res
         .status(400)
         .json({ success: false, message: "Rating must be between 0 and 5." });
     }
 
-    const user = await User.findById(user_id);
-    if (!user?.truck_profile?.vehicle_profile) {
+    // Fetch the target user whose vehicle rating will be updated
+    const targetUser = await User.findById(vehicle_id);
+    if (!targetUser?.truck_profile?.vehicle_profile) {
       return res
         .status(404)
         .json({ success: false, message: "Vehicle profile not found." });
     }
 
-    const vp = user.truck_profile.vehicle_profile;
-    if (
-      (vehicle_profile.registration_number &&
-        vp.registration_number !== vehicle_profile.registration_number) ||
-      (vehicle_profile.make && vehicle_profile.make !== vp.make) ||
-      (vehicle_profile.model && vehicle_profile.model !== vp.model)
-    ) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Vehicle identity mismatch." });
-    }
+    const vp = targetUser.truck_profile.vehicle_profile;
+    const currentRating = vp.rating || 0;
+    const currentCount = vp.ratings_count || 0;
 
-    const { rating: currentRating = 0, ratings_count = 0 } = vp;
-    const newCount = ratings_count + 1;
-    const newRating = (currentRating * ratings_count + rating) / newCount;
+    // Compute new aggregated rating
+    const newCount = currentCount + 1;
+    const newRating = (currentRating * currentCount + rating) / newCount;
 
-    user.truck_profile.vehicle_profile.rating = parseFloat(
-      newRating.toFixed(2)
-    );
-    user.truck_profile.vehicle_profile.ratings_count = newCount;
+    vp.rating = parseFloat(newRating.toFixed(2));
+    vp.ratings_count = newCount;
 
-    await user.save();
+    // Persist changes
+    targetUser.markModified("truck_profile.vehicle_profile");
+    await targetUser.save();
 
-    sendSuccessResponse(res, "Vehicle rating updated via aggregation.");
+    // Send only status, message, timestamp
+    return sendSuccessResponse(res, "Vehicle rating updated successfully.");
   } catch (err) {
     next(err);
   }

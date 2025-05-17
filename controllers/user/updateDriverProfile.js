@@ -1,17 +1,14 @@
 // controllers/user/updateDriverProfile.js
+
 const { User } = require("../../models");
-const sendSuccessResponse = require("../../utils/success-response");
-const {
-  updateProfileFields,
-  formatBase64Image,
-  formatDateString,
-} = require("../../utils/profile-helper");
+const sharp = require("sharp");
+const fs = require("fs");
 
 /**
  * @swagger
  * /profile/driver:
  *   patch:
- *     summary: Update the authenticated driver's profile
+ *     summary: Update the authenticated driver's profile and license images
  *     tags:
  *       - Driver Profile
  *     security:
@@ -27,14 +24,14 @@ const {
  *                 type: string
  *               last_name:
  *                 type: string
- *               license_number:
- *                 type: string
  *               date_of_birth:
  *                 type: string
- *                 example: "12-12-1990"
+ *                 description: Accepts ISO (`YYYY-MM-DD`) or `DD-MM-YYYY`
+ *               license_number:
+ *                 type: string
  *               license_expiry:
  *                 type: string
- *                 example: "12-12-2030"
+ *                 description: Accepts ISO (`YYYY-MM-DD`) or `DD-MM-YYYY`
  *               license_Front:
  *                 type: string
  *                 format: binary
@@ -47,73 +44,119 @@ const {
  *     responses:
  *       200:
  *         description: Driver profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     firstName:
- *                       type: string
- *                     lastName:
- *                       type: string
- *                     licenseNumber:
- *                       type: string
- *                     dateOfBirth:
- *                       type: string
- *                     licenseExpiry:
- *                       type: string
- *                     licenseFront:
- *                       type: string
- *                     licenseBack:
- *                       type: string
- *                     licenseSelfie:
- *                       type: string
+ *       400:
+ *         description: Bad request – invalid date or missing file
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
  */
-exports.updateDriverProfile = async (req, res, next) => {
-  try {
-    const updates = updateProfileFields("driver", req.body, {
-      license_Front: req.files?.license_Front?.[0],
-      license_Back: req.files?.license_Back?.[0],
-      license_Selfie: req.files?.license_Selfie?.[0],
-    });
+exports.updateDriverProfile = async (req, res) => {
+  // 1) Build the $set update object
+  const set = {};
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: updates },
-      { new: true }
-    );
+  // a) Text fields
+  ["first_name", "last_name", "license_number"].forEach((f) => {
+    if (req.body[f] !== undefined) {
+      set[`truck_profile.driver_profile.${f}`] = req.body[f];
+    }
+  });
 
-    const dp = user?.truck_profile?.driver_profile || {};
+  // b) Date fields
+  const toDate = (val) => {
+    if (/^\d{2}-\d{2}-\d{4}$/.test(val)) {
+      const [d, m, y] = val.split("-");
+      return new Date(`${y}-${m}-${d}`);
+    }
+    return new Date(val);
+  };
+  ["date_of_birth", "license_expiry"].forEach((f) => {
+    if (req.body[f] !== undefined) {
+      const dt = toDate(req.body[f]);
+      if (isNaN(dt)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid date for ${f}. Use YYYY-MM-DD or DD-MM-YYYY.`,
+        });
+      }
+      set[`truck_profile.driver_profile.${f}`] = dt;
+    }
+  });
 
-    sendSuccessResponse(res, "Driver profile updated.", {
-      firstName: dp.first_name || "",
-      lastName: dp.last_name || "",
-      licenseNumber: dp.license_number || "",
-      dateOfBirth: formatDateString(dp.date_of_birth),
-      licenseExpiry: formatDateString(dp.license_expiry),
-      licenseFront: formatBase64Image(
-        dp.license_front?.data,
-        dp.license_front?.contentType
-      ),
-      licenseBack: formatBase64Image(
-        dp.license_back?.data,
-        dp.license_back?.contentType
-      ),
-      licenseSelfie: formatBase64Image(
-        dp.license_selfie?.data,
-        dp.license_selfie?.contentType
-      ),
-    });
-  } catch (err) {
-    next(err);
+  // c) File fields
+  const filesMap = {
+    license_Front: "license_front",
+    license_Back: "license_back",
+    license_Selfie: "license_selfie",
+  };
+
+  for (const [fieldKey, propName] of Object.entries(filesMap)) {
+    const arr = req.files?.[fieldKey];
+    if (!arr || !arr[0]) continue;
+
+    const file = arr[0];
+    // read buffer
+    let buf = file.buffer;
+    if (!buf && file.path) {
+      try {
+        buf = fs.readFileSync(file.path);
+      } catch (e) {
+        return res.status(500).json({
+          success: false,
+          message: `Read error on ${fieldKey}: ${e.message}`,
+        });
+      }
+    }
+    if (!buf) continue;
+
+    // original
+    set[`truck_profile.driver_profile.${propName}.original`] = {
+      data: buf,
+      contentType: file.mimetype,
+    };
+
+    // compressed via Sharp
+    let comp;
+    try {
+      comp = await sharp(buf)
+        .resize({ width: 200 })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+    } catch (e) {
+      return res.status(500).json({
+        success: false,
+        message: `Compression error on ${fieldKey}: ${e.message}`,
+      });
+    }
+    set[`truck_profile.driver_profile.${propName}.compressed`] = {
+      data: comp,
+      contentType: "image/jpeg",
+    };
   }
+
+  // 2) Perform the update
+  let updated;
+  try {
+    updated = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: set },
+      { new: true, runValidators: true }
+    );
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Update failed: " + err.message });
+  }
+
+  // 3) Success
+  return res.status(200).json({
+    success: true,
+    message: "Driver profile updated successfully.",
+    timestamp: new Date().toISOString(),
+  });
 };

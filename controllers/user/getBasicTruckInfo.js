@@ -1,8 +1,13 @@
+// controllers/user/getBasicTruckInfo.js
+
+const User = require("../../models/user");
+const { formatBase64Image } = require("../../utils/profile-helper");
+
 /**
  * @swagger
  * /truck:
  *   get:
- *     summary: Get basic truck info (name and profile photo)
+ *     summary: Get basic truck info (name, compressed profile photo, photo size, and rating)
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -32,7 +37,17 @@
  *                       example: Ford Focus
  *                     profile_photo:
  *                       type: string
- *                       example: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...
+ *                       description: Base64-encoded compressed data URI of the selected image
+ *                     profile_photo_size:
+ *                       type: integer
+ *                       description: Size of the returned image buffer in bytes
+ *                     rating:
+ *                       type: number
+ *                       format: float
+ *                       example: 4.25
+ *                     ratings_count:
+ *                       type: integer
+ *                       example: 12
  *       401:
  *         description: Unauthorized
  *       404:
@@ -40,13 +55,9 @@
  *       500:
  *         description: Server error
  */
-
-const User = require("../../models/user");
-
 const getBasicTruckInfo = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const user = await User.findById(userId);
 
     if (!user) {
@@ -56,14 +67,11 @@ const getBasicTruckInfo = async (req, res) => {
       });
     }
 
-    let name = "";
-    let profile_photo = "";
-
+    // Determine display name
     const { user_name, truck_profile } = user;
     const driver_profile = truck_profile?.driver_profile;
     const vehicle_profile = truck_profile?.vehicle_profile;
-
-    // Prefer vehicle make + model as name
+    let name = "";
     if (vehicle_profile?.make && vehicle_profile?.model) {
       name = `${vehicle_profile.make} ${vehicle_profile.model}`;
     } else if (driver_profile?.first_name && driver_profile?.last_name) {
@@ -72,31 +80,42 @@ const getBasicTruckInfo = async (req, res) => {
       name = user_name || "";
     }
 
-    // Prefer vehicle photo → then license selfie
-    if (vehicle_profile?.vehicle_photo?.data) {
-      profile_photo = `data:${
-        vehicle_profile.vehicle_photo.content_type
-      };base64,${vehicle_profile.vehicle_photo.data.toString("base64")}`;
-    } else if (driver_profile?.license_selfie?.data) {
-      profile_photo = `data:${
-        driver_profile.license_selfie.content_type
-      };base64,${driver_profile.license_selfie.data.toString("base64")}`;
+    // Pick compressed image if available, otherwise original
+    const compImg = vehicle_profile?.vehicle_photo?.compressed;
+    const origImg = vehicle_profile?.vehicle_photo?.original;
+    let buffer, contentType;
+    if (compImg?.data) {
+      buffer = compImg.data;
+      contentType = compImg.contentType;
+    } else if (origImg?.data) {
+      buffer = origImg.data;
+      contentType = origImg.contentType;
     }
+
+    // Build data URI and measure size
+    const profile_photo = buffer ? formatBase64Image(buffer, contentType) : "";
+    const profile_photo_size = buffer ? buffer.length : 0;
+
+    // Include rating info
+    const rating = vehicle_profile?.rating || 0;
+    const ratings_count = vehicle_profile?.ratings_count || 0;
 
     return res.status(200).json({
       success: true,
       message: "Basic truck info retrieved",
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       data: {
         name,
         profile_photo,
+        profile_photo_size,
+        rating,
+        ratings_count,
       },
     });
   } catch (error) {
-    console.error("Error in getBasicTruckInfo:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error: " + error.message,
     });
   }
 };

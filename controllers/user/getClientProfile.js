@@ -1,4 +1,5 @@
 // controllers/user/getClientProfile.js
+
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 const { formatBase64Image } = require("../../utils/profile-helper");
@@ -25,8 +26,10 @@ const { formatBase64Image } = require("../../utils/profile-helper");
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: Profile fetched successfully.
  *                 timestamp:
  *                   type: string
+ *                   format: date-time
  *                 data:
  *                   type: object
  *                   properties:
@@ -44,7 +47,10 @@ const { formatBase64Image } = require("../../utils/profile-helper");
  *                       type: string
  *                     profile_photo:
  *                       type: string
- *                       description: Base64 image string
+ *                       description: Base64-encoded compressed image string
+ *                     profile_photo_size:
+ *                       type: integer
+ *                       description: Size of the returned image in bytes
  */
 exports.getClientProfile = async (req, res, next) => {
   try {
@@ -60,6 +66,21 @@ exports.getClientProfile = async (req, res, next) => {
 
     const profile = client.client_profile || {};
 
+    // choose compressed or original buffer
+    let buffer;
+    let contentType;
+    if (profile.profile_photo?.compressed?.data) {
+      buffer = profile.profile_photo.compressed.data;
+      contentType = profile.profile_photo.compressed.contentType;
+    } else if (profile.profile_photo?.original?.data) {
+      buffer = profile.profile_photo.original.data;
+      contentType = profile.profile_photo.original.contentType;
+    }
+
+    // format base64 string and measure size
+    const photo = buffer ? formatBase64Image(buffer, contentType) : "";
+    const photoSize = buffer ? buffer.length : 0;
+
     sendSuccessResponse(res, "Profile fetched successfully.", {
       user_id: client._id,
       phone: client.phone,
@@ -67,10 +88,8 @@ exports.getClientProfile = async (req, res, next) => {
       last_name: profile.last_name || "",
       email: profile.email || "",
       address: profile.address || "",
-      profile_photo: formatBase64Image(
-        profile.profile_photo?.data,
-        profile.profile_photo?.contentType
-      ),
+      profile_photo: photo,
+      profile_photo_size: photoSize,
     });
   } catch (err) {
     next(err);

@@ -1,11 +1,15 @@
+// controllers/user/UpdateLocationVehicle.js
+
 const { User } = require("../../models");
-const sendSuccessResponse = require("../../utils/success-response");
 
 /**
  * @swagger
  * /vehicle/update-location:
  *   post:
- *     summary: Update the vehicle's current geolocation (longitude, latitude)
+ *     summary: Update your vehicle's current geolocation
+ *     description: >
+ *       Authenticate via JWT and update the calling user's own
+ *       vehicle_profile.geo_location. Expects a GeoJSON Point object.
  *     tags:
  *       - Vehicle
  *     security:
@@ -17,15 +21,26 @@ const sendSuccessResponse = require("../../utils/success-response");
  *           schema:
  *             type: object
  *             required:
- *               - longitude
- *               - latitude
+ *               - geo_location
  *             properties:
- *               longitude:
- *                 type: number
- *                 example: 74.3587
- *               latitude:
- *                 type: number
- *                 example: 31.5204
+ *               geo_location:
+ *                 type: object
+ *                 required:
+ *                   - type
+ *                   - coordinates
+ *                 properties:
+ *                   type:
+ *                     type: string
+ *                     enum: [Point]
+ *                     example: Point
+ *                   coordinates:
+ *                     type: array
+ *                     items:
+ *                       type: number
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                     description: [longitude, latitude]
+ *                     example: [74.3587, 31.5204]
  *     responses:
  *       200:
  *         description: Vehicle location updated successfully
@@ -44,51 +59,73 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                   type: string
  *                   format: date-time
  *       400:
- *         description: Bad request – missing or invalid coordinates
+ *         description: Bad request — missing or malformed geo_location
  *       401:
- *         description: Unauthorized – missing or invalid token
+ *         description: Unauthorized — invalid or missing token
  *       404:
- *         description: Vehicle not found
- *       500:
- *         description: Internal server error
+ *         description: Vehicle profile not found for this user
  */
-const UpdateLocationVehicle = async (req, res, next) => {
-  const { longitude, latitude } = req.body;
-
-  if (longitude == null || latitude == null) {
-    return res.status(400).json({
-      success: false,
-      message: "longitude and latitude are required",
-    });
-  }
-
+exports.UpdateLocationVehicle = async function UpdateLocationVehicle(
+  req,
+  res,
+  next
+) {
   try {
-    const userId = req.user.id;
+    const { geo_location } = req.body;
 
-    const user = await User.findById(userId);
-
-    if (!user || !user.truck_profile?.vehicle_profile) {
-      return res.status(404).json({
+    // Validate geo_location object
+    if (
+      !geo_location ||
+      geo_location.type !== "Point" ||
+      !Array.isArray(geo_location.coordinates) ||
+      geo_location.coordinates.length !== 2 ||
+      typeof geo_location.coordinates[0] !== "number" ||
+      typeof geo_location.coordinates[1] !== "number"
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Vehicle not found for this user.",
+        message:
+          "geo_location must be a GeoJSON Point with [longitude, latitude].",
       });
     }
 
+    // Identify the caller by JWT
+    const userId = req.user.id;
+
+    // Load the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Ensure nested structures exist
+    if (!user.truck_profile) {
+      user.truck_profile = {};
+    }
+    if (!user.truck_profile.vehicle_profile) {
+      user.truck_profile.vehicle_profile = {};
+    }
+
+    // Update geo_location
     user.truck_profile.vehicle_profile.geo_location = {
       type: "Point",
-      coordinates: [longitude, latitude],
+      coordinates: geo_location.coordinates,
     };
 
+    // Mark modified & save
+    user.markModified("truck_profile.vehicle_profile.geo_location");
     await user.save();
 
+    // Return only status, message, timestamp
     return res.status(200).json({
       success: true,
       message: "Vehicle location updated successfully.",
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
-
-module.exports = UpdateLocationVehicle;

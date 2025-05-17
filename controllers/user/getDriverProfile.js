@@ -1,4 +1,5 @@
 // controllers/user/getDriverProfile.js
+
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 const {
@@ -25,10 +26,13 @@ const {
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: Driver profile fetched.
  *                 timestamp:
  *                   type: string
+ *                   format: date-time
  *                 data:
  *                   type: object
  *                   properties:
@@ -46,20 +50,28 @@ const {
  *                       example: "12-12-2031"
  *                     licenseFront:
  *                       type: string
- *                       description: base64 image string
+ *                       description: Base64-encoded compressed image string
+ *                     licenseFrontSize:
+ *                       type: integer
+ *                       description: Size in bytes of the returned image
  *                     licenseBack:
  *                       type: string
- *                       description: base64 image string
+ *                       description: Base64-encoded compressed image string
+ *                     licenseBackSize:
+ *                       type: integer
+ *                       description: Size in bytes of the returned image
  *                     licenseSelfie:
  *                       type: string
- *                       description: base64 image string
+ *                       description: Base64-encoded compressed image string
+ *                     licenseSelfieSize:
+ *                       type: integer
+ *                       description: Size in bytes of the returned image
  */
 exports.getDriverProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select(
       "truck_profile.driver_profile"
     );
-
     if (!user) {
       return res
         .status(404)
@@ -68,24 +80,40 @@ exports.getDriverProfile = async (req, res, next) => {
 
     const dp = user.truck_profile?.driver_profile || {};
 
+    // helper to pick compressed over original, format and size
+    const pickImage = (field) => {
+      const comp = field?.compressed;
+      const orig = field?.original;
+      let buffer, contentType;
+      if (comp?.data) {
+        buffer = comp.data;
+        contentType = comp.contentType;
+      } else if (orig?.data) {
+        buffer = orig.data;
+        contentType = orig.contentType;
+      }
+      return {
+        b64: buffer ? formatBase64Image(buffer, contentType) : "",
+        size: buffer ? buffer.length : 0,
+      };
+    };
+
+    const front = pickImage(dp.license_front);
+    const back = pickImage(dp.license_back);
+    const selfie = pickImage(dp.license_selfie);
+
     sendSuccessResponse(res, "Driver profile fetched.", {
       firstName: dp.first_name || "",
       lastName: dp.last_name || "",
       dateOfBirth: formatDateString(dp.date_of_birth),
       licenseNumber: dp.license_number || "",
       licenseExpiry: formatDateString(dp.license_expiry),
-      licenseFront: formatBase64Image(
-        dp.license_front?.data,
-        dp.license_front?.contentType
-      ),
-      licenseBack: formatBase64Image(
-        dp.license_back?.data,
-        dp.license_back?.contentType
-      ),
-      licenseSelfie: formatBase64Image(
-        dp.license_selfie?.data,
-        dp.license_selfie?.contentType
-      ),
+      licenseFront: front.b64,
+      licenseFrontSize: front.size,
+      licenseBack: back.b64,
+      licenseBackSize: back.size,
+      licenseSelfie: selfie.b64,
+      licenseSelfieSize: selfie.size,
     });
   } catch (err) {
     next(err);
