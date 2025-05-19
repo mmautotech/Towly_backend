@@ -1,50 +1,65 @@
+// controllers/ride-request/getActiveRideRequest.js
+
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /fetch/ride-requests/active:
  *   post:
- *     summary: Get user's active ride requests
+ *     summary: Get the authenticated user's single active ride request
  *     tags: [RideRequest]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [user_id]
- *             properties:
- *               user_id:
- *                 type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Active ride requests returned
+ *         description: Single active ride request returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Active ride request
+ *                 data:
+ *                   oneOf:
+ *                     - $ref: '#/components/schemas/RideRequest'
+ *                     - type: 'null'
  */
-/**
- * @desc Get user's active ride requests
- * @route POST /api/fetch/ride-requests/active
- */
-const getActiveRideRequestsByUser = async (req, res, next) => {
-  try {
-    const { user_id } = req.body;
 
-    if (!user_id || typeof user_id !== "string") {
-      return next(new Error("Invalid or missing user_id."));
+/**
+ * @desc Get the authenticated user's single active ride request
+ * @route POST /api/fetch/ride-requests/active
+ * @access Private (expects a valid JWT in Authorization header)
+ */
+const getActiveRideRequestByUser = async (req, res, next) => {
+  try {
+    // user_id comes from your auth middleware (e.g. decoded JWT)
+    const user_id = req.user && req.user.id;
+    if (!user_id || !ObjectId.isValid(user_id)) {
+      return next(new Error("Unauthorized or invalid user token."));
     }
 
-    const activeRequests = await RideRequest.find({
+    // fetch one active request (status not cancelled or completed)
+    const request = await RideRequest.findOne({
       user_id: new ObjectId(user_id),
       status: { $nin: ["cancelled", "completed"] },
-    }).select(
-      "status origin_location dest_location vehicle_details pickup_date"
-    );
+    })
+      .select(
+        "_id status origin_location dest_location vehicle_details pickup_date"
+      )
+      .lean();
 
-    return sendSuccessResponse(res, "Active ride requests", activeRequests);
+    return sendSuccessResponse(res, "Active ride request", request || null);
   } catch (error) {
     return next(error);
   }
 };
 
-module.exports = getActiveRideRequestsByUser;
+module.exports = getActiveRideRequestByUser;

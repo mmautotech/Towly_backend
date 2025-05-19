@@ -1,12 +1,15 @@
+// controllers/ride-request/acceptRideRequest.js
+
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /ride-request/accept:
  *   patch:
- *     summary: Accept a ride request with a specific offer
+ *     summary: Accept a ride request with a specific offer and notify the truck
  *     tags: [RideRequest]
  *     requestBody:
  *       required: true
@@ -14,7 +17,10 @@ const sendSuccessResponse = require("../../utils/success-response");
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, request_id, offer_id]
+ *             required:
+ *               - user_id
+ *               - request_id
+ *               - offer_id
  *             properties:
  *               user_id:
  *                 type: string
@@ -25,17 +31,33 @@ const sendSuccessResponse = require("../../utils/success-response");
  *     responses:
  *       200:
  *         description: Offer accepted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Offer accepted successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     request_id:
+ *                       type: string
+ *                     offer_id:
+ *                       type: string
  */
 const acceptRideRequest = async (req, res, next) => {
   try {
     const { user_id, request_id, offer_id } = req.body;
 
-    // ensure all parameters are provided
     if (!user_id || !request_id || !offer_id) {
       return next(new Error("user_id, request_id and offer_id are required."));
     }
 
-    // validate ObjectId formats
     if (
       !ObjectId.isValid(user_id) ||
       !ObjectId.isValid(request_id) ||
@@ -46,7 +68,6 @@ const acceptRideRequest = async (req, res, next) => {
         .json({ message: "Invalid user_id, request_id or offer_id" });
     }
 
-    // find the ride request that is still posted and contains the given offer
     const updatedRequest = await RideRequest.findOneAndUpdate(
       {
         user_id: new ObjectId(user_id),
@@ -67,8 +88,25 @@ const acceptRideRequest = async (req, res, next) => {
       );
     }
 
-    // respond with custom message including the offer_id
-    return sendSuccessResponse(res, `${offer_id} Offer accepted successfully`);
+    // Notify the truck via Socket.IO
+    const acceptedOffer = updatedRequest.offers.find((o) =>
+      o._id.equals(offer_id)
+    );
+    if (acceptedOffer) {
+      const io = req.app.get("io");
+      io.to(`truck_${acceptedOffer.truck_id.toString()}`).emit(
+        "offerAccepted",
+        {
+          request_id: updatedRequest._id.toString(),
+          offer_id,
+        }
+      );
+    }
+
+    return sendSuccessResponse(res, "Offer accepted successfully", {
+      request_id: updatedRequest._id.toString(),
+      offer_id,
+    });
   } catch (error) {
     return next(error);
   }

@@ -1,9 +1,13 @@
+// server.js
+
 // Load environment variables as early as possible
 require("dotenv").config();
 
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const path = require("path");
+const socketIo = require("socket.io");
 
 // Import custom modules
 const mainRouter = require("./routes/main-router");
@@ -26,7 +30,6 @@ app.use(cors(corsOptions));
 
 // Body parsers
 app.use(express.json());
-// for parsing application/x-www-form-urlencoded (needed if you use multer + form fields)
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files
@@ -38,12 +41,41 @@ app.use("/api/", mainRouter);
 // Global error-handling middleware (should be the last middleware)
 app.use(errorHandler);
 
-// Start server
+// Create HTTP server and attach Socket.IO
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+
+const io = socketIo(server, {
+  cors: {
+    origin: corsOptions.origin,
+    methods: corsOptions.methods,
+    credentials: corsOptions.credentials,
+  },
+});
+
+// Make io available in your routes/controllers via req.app.get('io')
+app.set("io", io);
+
+// Handle socket connections
+io.on("connection", (socket) => {
+  console.log(`⚡️ Socket connected: ${socket.id}`);
+
+  // Listen for trucks registering themselves
+  socket.on("registerTruck", (truckId) => {
+    console.log(`🚚 Truck ${truckId} joined room`);
+    socket.join(`truck_${truckId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`❌ Socket disconnected: ${socket.id}`);
+  });
+});
+
+// Start server
 const startServer = async () => {
   try {
     await connectDb();
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✅ Server running on http://localhost:${PORT}/api`);
     });
   } catch (err) {

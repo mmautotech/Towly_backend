@@ -16,7 +16,6 @@ const {
 } = require("../validators/auth-validator");
 const {
   ride_request_schema,
-  get_created_by_user_schema,
   post_ride_schema,
   accept_ride_schema,
   cancel_ride_schema,
@@ -34,30 +33,6 @@ const {
 } = require("../validators/truck-profile-validator");
 // ─── CONTROLLERS ───────────────────────────────────────────
 const {
-  registerUser,
-  loginUser,
-  forgotPassword,
-} = require("../controllers/auth");
-const {
-  createRideRequest,
-  postRideRequest,
-  cancelRideRequest,
-  acceptRideRequest,
-  getActiveRideRequestsByUser,
-  getNearbyRideRequests,
-  getAppliedRide_postedRequests,
-  getAcceptedRide_postedRequests,
-  getUnappliedRide_postedRequests,
-  getHistoryClient,
-  getHistoryTruck,
-  getTrackingInfoByUser,
-  // Offers related
-  getOffersForRideRequest,
-  getSingleTruckOffer,
-  addOfferToRideRequest,
-  addCounterOfferToRideRequest,
-} = require("../controllers/ride-request");
-const {
   getBasicUserInfo,
   getBasicTruckInfo,
   UpdateRatingClient,
@@ -74,6 +49,13 @@ const {
 } = require("../controllers/user");
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
+//  ── CONTROLLERS ──
+const {
+  registerUser,
+  loginUser,
+  forgotPassword,
+} = require("../controllers/auth");
+
 router.post("/auth/register", validateRequest(signup_schema), registerUser);
 router.post("/auth/login", validateRequest(login_schema), loginUser);
 router.post(
@@ -83,16 +65,21 @@ router.post(
 );
 
 // ─── RIDE REQUEST ROUTES ───────────────────────────────────
+// ─── CONTROLLERS ───────────────────────────────────────────
+const {
+  createRideRequest,
+  postRideRequest,
+  cancelRideRequest,
+  acceptRideRequest,
+} = require("../controllers/ride-request");
+// ─── POST to create a ride request ────────────────────────────
 router.post(
-  "/create/ride-request",
+  "/ride-request/create",
   validateRequest(ride_request_schema),
   createRideRequest
 );
-router.patch(
-  "/ride-request/cancel",
-  validateRequest(cancel_ride_schema),
-  cancelRideRequest
-);
+
+// ─── PATCH to update ride request status(4) ────────────────────
 router.patch(
   "/ride-request/post",
   validateRequest(post_ride_schema),
@@ -103,24 +90,49 @@ router.patch(
   validateRequest(accept_ride_schema),
   acceptRideRequest
 );
-router.post(
-  "/fetch/ride-requests/active",
-  validateRequest(get_created_by_user_schema),
-  getActiveRideRequestsByUser
+router.patch(
+  "/ride-request/cancel",
+  validateRequest(cancel_ride_schema),
+  cancelRideRequest
 );
 
+// ─── GET to fetch ride requests ────────────────────────────
+const {
+  getActiveRideRequestsByUser,
+
+  getUnappliedRide_postedRequests,
+  getAppliedRide_postedRequests,
+} = require("../controllers/ride-request");
+// fetch the single active ride for the authenticated user
 router.post(
-  "/ride-requests/applied",
+  "/fetch/ride-requests/active",
   authenticateToken,
-  getAppliedRide_postedRequests
+  getActiveRideRequestsByUser
 );
-router.post("/ride-requests/accepted", getAcceptedRide_postedRequests);
+// fetch the ride requests that are posted by the authenticated user
 router.post(
   "/ride-requests/new",
   authenticateToken,
   getUnappliedRide_postedRequests
 );
-router.post("/ride-requests/nearby", getNearbyRideRequests);
+router.post(
+  "/ride-requests/applied",
+  authenticateToken,
+  getAppliedRide_postedRequests
+);
+
+const {
+  // Offers related
+  getOffersForRideRequest,
+  getSingleTruckOffer,
+  addOfferToRideRequest,
+  addCounterOfferToRideRequest,
+
+  getHistoryClient,
+  getHistoryTruck,
+  getTrackingInfoByUser,
+} = require("../controllers/ride-request");
+
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
 router.post(
