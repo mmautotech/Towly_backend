@@ -55,7 +55,7 @@ const { formatBase64Image } = require("../../utils/profile-helper");
 exports.getClientProfile = async (req, res, next) => {
   try {
     const client = await User.findById(req.user.id).select(
-      "phone client_profile"
+      "phone email client_profile"
     );
 
     if (!client) {
@@ -86,7 +86,7 @@ exports.getClientProfile = async (req, res, next) => {
       phone: client.phone,
       first_name: profile.first_name || "",
       last_name: profile.last_name || "",
-      email: profile.email || "",
+      email: client.email ,
       address: profile.address || "",
       profile_photo: photo,
       profile_photo_size: photoSize,

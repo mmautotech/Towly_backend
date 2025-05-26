@@ -20,6 +20,9 @@ const app = express();
 const setupSwaggerDocs = require("./utils/swagger");
 setupSwaggerDocs(app);
 
+
+
+
 // CORS: allow PATCH in addition to GET/POST/PUT/DELETE
 const corsOptions = {
   origin: "http://localhost:5173",

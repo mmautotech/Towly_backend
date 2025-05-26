@@ -31,6 +31,7 @@ const {
   update_driver_profile_schema,
   update_vehicle_profile_schema,
 } = require("../validators/truck-profile-validator");
+
 // ─── CONTROLLERS ───────────────────────────────────────────
 const {
   getBasicUserInfo,
@@ -48,14 +49,38 @@ const {
   getSettings,
 } = require("../controllers/user");
 
-// ─── AUTH ROUTES ───────────────────────────────────────────
-//  ── CONTROLLERS ──
 const {
   registerUser,
   loginUser,
   forgotPassword,
 } = require("../controllers/auth");
 
+const {
+  createRideRequest,
+  postRideRequest,
+  cancelRideRequest,
+  acceptRideRequest,
+  getActiveRideRequestsByUser,
+  getUnappliedRide_postedRequests,
+  getAppliedRide_postedRequests,
+  getOffersForRideRequest,
+  getSingleTruckOffer,
+  addOfferToRideRequest,
+  addCounterOfferToRideRequest,
+  getHistoryClient,
+  getHistoryTruck,
+  getTrackingInfoByUser,
+} = require("../controllers/ride-request");
+
+// Add messaging controllers
+const {
+  sendMessage,
+  getMessagesByUser,
+  markMessageRead,
+  getConversationBetweenUsers,
+} = require("../controllers/message/message");
+
+// ─── AUTH ROUTES ───────────────────────────────────────────
 router.post("/auth/register", validateRequest(signup_schema), registerUser);
 router.post("/auth/login", validateRequest(login_schema), loginUser);
 router.post(
@@ -65,21 +90,12 @@ router.post(
 );
 
 // ─── RIDE REQUEST ROUTES ───────────────────────────────────
-// ─── CONTROLLERS ───────────────────────────────────────────
-const {
-  createRideRequest,
-  postRideRequest,
-  cancelRideRequest,
-  acceptRideRequest,
-} = require("../controllers/ride-request");
-// ─── POST to create a ride request ────────────────────────────
 router.post(
   "/ride-request/create",
   validateRequest(ride_request_schema),
   createRideRequest
 );
 
-// ─── PATCH to update ride request status(4) ────────────────────
 router.patch(
   "/ride-request/post",
   validateRequest(post_ride_schema),
@@ -96,20 +112,11 @@ router.patch(
   cancelRideRequest
 );
 
-// ─── GET to fetch ride requests ────────────────────────────
-const {
-  getActiveRideRequestsByUser,
-
-  getUnappliedRide_postedRequests,
-  getAppliedRide_postedRequests,
-} = require("../controllers/ride-request");
-// fetch the single active ride for the authenticated user
 router.post(
   "/fetch/ride-requests/active",
   authenticateToken,
   getActiveRideRequestsByUser
 );
-// fetch the ride requests that are posted by the authenticated user
 router.post(
   "/ride-requests/new",
   authenticateToken,
@@ -120,18 +127,6 @@ router.post(
   authenticateToken,
   getAppliedRide_postedRequests
 );
-
-const {
-  // Offers related
-  getOffersForRideRequest,
-  getSingleTruckOffer,
-  addOfferToRideRequest,
-  addCounterOfferToRideRequest,
-
-  getHistoryClient,
-  getHistoryTruck,
-  getTrackingInfoByUser,
-} = require("../controllers/ride-request");
 
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
@@ -158,24 +153,20 @@ router.post(
 );
 
 // ─── USER ROUTES (NEW) ────────────────────────────────────
-// Basic info
 router.post("/user", protect, getBasicUserInfo);
 router.get("/truck", authenticateToken, getBasicTruckInfo);
 
-// Ratings
 router.post("/client/update-rating", authenticateToken, UpdateRatingClient);
 router.post("/vehicle/update-rating", authenticateToken, UpdateRatingVehicle);
 
-// Location
 router.post(
   "/vehicle/update-location",
   authenticateToken,
   UpdateLocationVehicle
 );
+
 // ─── Client PROFILE ROUTES ────────────────────────────
-// GET Client profile
 router.get("/profile", authenticateToken, getClientProfile);
-// PATCH client profile (text + 1 images)
 router.patch(
   "/profile",
   authenticateToken,
@@ -185,9 +176,7 @@ router.patch(
 );
 
 // ─── TRUCK PROFILE ROUTES ────────────────────────────
-// GET driver profile
 router.get("/profile/driver", protect, getDriverProfile);
-// PATCH driver profile (text + 3 images)
 router.patch(
   "/profile/driver",
   protect,
@@ -201,25 +190,47 @@ router.patch(
 );
 
 // ─── VEHICLE PROFILE ROUTES ─────────────────────────
-// GET vehicle profile
 router.get("/profile/vehicle", protect, getVehicleProfile);
-// PATCH vehicle profile (1 image + text)
 router.patch(
   "/profile/vehicle",
   protect,
-  upload.single("vehiclePhoto"), // use this middleware
-  validateRequest(update_vehicle_profile_schema), // optional
+  upload.single("vehiclePhoto"),
+  validateRequest(update_vehicle_profile_schema),
   updateVehicleProfile
 );
 
 // ─── Settings ROUTES ("/settings")─────────────────────────
-// ─── POST to update either truck_settings or client_settings ────────────
 router.post("/settings", updateSettings);
-// ─── GET to fetch truck_settings or client_settings ────────────────────────────
 router.get("/settings", getSettings);
 
 // ─── History ROUTES ("/history")─────────────────────────
 router.post("/ride-requests/history", getHistoryClient);
 router.post("/ride-requests/history/truck", getHistoryTruck);
+
+// ─── MESSAGING ROUTES ───────────────────────────────────────
+
+// Send a new message
+router.post(
+  "/messages/send",
+  sendMessage
+);
+
+// Get all messages for a specific user
+router.get(
+  "/messages/user/:userId",
+  getMessagesByUser
+);
+
+// Mark a message as read
+router.patch(
+  "/messages/:messageId/read",
+  markMessageRead
+);
+
+// Get conversation between two users
+router.get(
+  "/messages/conversation/:userId1/:userId2",
+  getConversationBetweenUsers
+);
 
 module.exports = router;

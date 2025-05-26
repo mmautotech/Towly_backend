@@ -21,6 +21,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  *               phone:
  *                 type: string
  *                 example: +441234567890
+ *               email:
+ *                 type: string
+ *                 example: JohnDoe@gmail.com
  *               password:
  *                 type: string
  *                 example: secretPass123
@@ -41,7 +44,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const registerUser = async (req, res, next) => {
   try {
-    const { user_name, phone, password, role } = req.body;
+    const { user_name, phone, email, password, role } = req.body;
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return next(new Error("Phone number already exists!"));
@@ -53,6 +56,7 @@ const registerUser = async (req, res, next) => {
     const newUser = new User({
       user_name,
       phone,
+      email,
       password,
       role: userRole,
     });

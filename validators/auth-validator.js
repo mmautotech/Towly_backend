@@ -14,6 +14,9 @@ const signup_schema = z.object({
     .string({ required_error: "Phone number is required." })
     .trim()
     .regex(/^\+44\d{10}$/, "Expected format: +44XXXXXXXXXX"),
+  email: z
+    .string({ required_error: "Email is required!" })
+    .email("Invalid email format!"),
   password: z
     .string({ required_error: "Password is required!" })
     .trim()
@@ -25,6 +28,7 @@ const signup_schema = z.object({
     ),
   role: z.enum(["client", "driver", "admin"]).optional().default("client"),
 });
+
 
 // ===================== 📝 Login Validation Schema ===================== //
 // Expects: phone and password

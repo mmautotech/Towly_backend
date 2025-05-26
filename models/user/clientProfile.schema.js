@@ -6,7 +6,11 @@ const clientProfileSchema = new mongoose.Schema(
   {
     first_name: { type: String, default: "" },
     last_name: { type: String, default: "" },
-    email: { type: String, required: true, unique: true },
+    email: {
+      type: String,
+      trim: true,
+      // no required or unique here, index created manually
+    },
     address: { type: String, default: "" },
     profile_photo: {
       original: { type: imageSchema },
