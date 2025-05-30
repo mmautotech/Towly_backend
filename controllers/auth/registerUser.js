@@ -7,13 +7,19 @@ const sendSuccessResponse = require("../../utils/success-response");
  * /auth/register:
  *   post:
  *     summary: Register a new user
- *     tags: [Auth]
+ *     tags:
+ *       - Auth
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - user_name
+ *               - phone
+ *               - email
+ *               - password
  *             properties:
  *               user_name:
  *                 type: string
@@ -23,20 +29,43 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 example: +441234567890
  *               email:
  *                 type: string
- *                 example: JohnDoe@gmail.com
+ *                 example: john.doe@example.com
  *               password:
  *                 type: string
- *                 example: secretPass123
+ *                 example: Secret@123
  *               role:
  *                 type: string
- *                 enum: [admin, driver, client]
+ *                 enum: [client, driver, admin]
  *                 example: client
  *     responses:
  *       201:
- *         description: User registered successfully
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User created successfully.
  *       400:
- *         description: Phone number already exists
+ *         description: Missing fields or duplicate phone/email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Email already exists.
  */
+
 /**
  * @desc  👤 Register a new user (Signup)
  * @route POST /auth/register
@@ -45,31 +74,28 @@ const sendSuccessResponse = require("../../utils/success-response");
 const registerUser = async (req, res, next) => {
   try {
     const { user_name, phone, email, password, role } = req.body;
-    const existingUser = await User.findOne({ phone });
-    if (existingUser) {
-      return next(new Error("Phone number already exists!"));
-    }
 
-    const allowedRoles = ["admin", "driver", "client"];
-    const userRole = role && allowedRoles.includes(role) ? role : "client";
-
-    const newUser = new User({
-      user_name,
-      phone,
-      email,
-      password,
-      role: userRole,
-    });
+    // Create & save new user; let mongoose catch duplicates
+    const newUser = new User({ user_name, phone, email, password, role });
     await newUser.save();
 
-    sendSuccessResponse(
-      res,
-      "User registered successfully.",
-      { user_id: newUser._id },
-      201
-    );
-  } catch (error) {
-    next(error);
+    // On success, return 201 with a simple message
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully.",
+    });
+  } catch (err) {
+    // Handle duplicate‐key errors for phone or email
+    if (err.code === 11000) {
+      const dupField = Object.keys(err.keyValue)[0];
+      const fieldName = dupField === "phone" ? "Phone number" : "Email";
+      return res.status(400).json({
+        success: false,
+        message: `${fieldName} already exists.`,
+      });
+    }
+    // Pass any other error along
+    next(err);
   }
 };
 

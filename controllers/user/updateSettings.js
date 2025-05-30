@@ -1,154 +1,111 @@
-/**
- * @swagger
- * /user/settings:
- *   post:
- *     summary: Save user settings (client or truck)
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - user_id
- *               - settings_type
- *               - settings
- *             properties:
- *               user_id:
- *                 type: string
- *                 description: MongoDB ObjectId of the user
- *                 example: "660f23ab238c4849313812cd"
- *               settings_type:
- *                 type: string
- *                 enum: [client, truck]
- *                 description: Type of settings to update
- *                 example: "truck"
- *               settings:
- *                 type: object
- *                 description: Object containing settings fields to update
- *                 properties:
- *                   language:
- *                     type: string
- *                     example: "English"
- *                     nullable: true
- *                   currency:
- *                     type: string
- *                     example: "USD"
- *                     nullable: true
- *                   distance_unit:
- *                     type: string
- *                     example: "Miles"
- *                     nullable: true
- *                   time_format:
- *                     type: string
- *                     example: "24 Hour"
- *                     nullable: true
- *                   radius:
- *                     type: string
- *                     example: "25"
- *                     nullable: true
- *     responses:
- *       200:
- *         description: Settings saved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Truck settings saved successfully."
- *       400:
- *         description: Invalid input or missing fields
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "user_id and settings_type are required."
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "User not found."
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Server error while saving user settings."
- */
-
 const mongoose = require("mongoose");
 const User = require("../../models/user");
 const sendSuccessResponse = require("../../utils/success-response");
 
-const normalizeSetting = (value) =>
-  typeof value === "string"
-    ? value.trim()
-    : Array.isArray(value)
-    ? value[0]
-    : value;
+/**
+ * @swagger
+ * /user/settings/update:
+ *   get:
+ *     summary: Update user settings (client or truck)
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: settings_type
+ *         schema:
+ *           type: string
+ *           enum: [client, truck]
+ *         required: true
+ *         description: Type of settings to update
+ *       - in: query
+ *         name: language
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Preferred UI language
+ *       - in: query
+ *         name: currency
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Preferred currency code
+ *       - in: query
+ *         name: distance_unit
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Distance unit (Miles/Kilometers)
+ *       - in: query
+ *         name: time_format
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Time format (12 Hour/24 Hour)
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Search radius value
+ *     responses:
+ *       200:
+ *         description: Settings saved successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+const normalize = (v) =>
+  typeof v === "string" ? v.trim() : undefined;
+
 const updateSettings = async (req, res) => {
   try {
-    const { user_id, settings_type, settings } = req.body;
+    // Extract the authenticated user ID from the JWT
+    const user_id = req.user.id;
+    const {
+      settings_type,
+      language,
+      currency,
+      distance_unit,
+      time_format,
+      radius,
+    } = req.query;
 
-    if (!user_id || !settings || !["truck", "client"].includes(settings_type)) {
+    // Validate settings_type
+    if (!["client", "truck"].includes(settings_type)) {
       return res.status(400).json({
         success: false,
-        message:
-          "user_id, settings_type ('truck' or 'client'), and settings object are required.",
+        message: "Query param 'settings_type' must be 'client' or 'truck'.",
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(user_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user_id format.",
-      });
-    }
-
-    const normalizedSettings = {
-      language: normalizeSetting(settings.language),
-      currency: normalizeSetting(settings.currency),
-      distance_unit: normalizeSetting(settings.distance_unit),
-      time_format: normalizeSetting(settings.time_format),
-      radius: normalizeSetting(settings.radius),
+    // Build a partial settings object from provided query params
+    const incoming = {
+      language: normalize(language),
+      currency: normalize(currency),
+      distance_unit: normalize(distance_unit),
+      time_format: normalize(time_format),
+      radius: normalize(radius),
     };
-
-    const cleanedSettings = Object.fromEntries(
-      Object.entries(normalizedSettings).filter(([_, v]) => v !== undefined)
+    const cleaned = Object.fromEntries(
+      Object.entries(incoming).filter(([_, v]) => v != null)
     );
 
-    const settingsPath = `settings.${settings_type}_settings`;
+    if (Object.keys(cleaned).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one settings field must be provided.",
+      });
+    }
 
+    // Construct the dot-path to the correct sub-document
+    const settingsPath = `settings.${settings_type}_settings`;
     const result = await User.updateOne(
       { _id: user_id },
-      { $set: { [settingsPath]: cleanedSettings } }
+      { $set: { [settingsPath]: cleaned } }
     );
 
     if (result.matchedCount === 0) {
@@ -158,17 +115,16 @@ const updateSettings = async (req, res) => {
       });
     }
 
+    // Use your shared success responder for consistency
     return sendSuccessResponse(
       res,
-      `${
-        settings_type.charAt(0).toUpperCase() + settings_type.slice(1)
-      } settings saved successfully.`
+      `${settings_type.charAt(0).toUpperCase() + settings_type.slice(1)} settings updated.`
     );
   } catch (error) {
-    console.error("User settings update error:", error.stack || error);
+    console.error("Error saving user settings:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while saving user settings.",
+      message: "Server error while saving settings.",
     });
   }
 };

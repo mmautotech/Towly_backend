@@ -1,89 +1,101 @@
+// controllers/ride-request/addOfferToRideRequest.js
 const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /ride-request/add-offer:
  *   post:
  *     summary: Add or update an offer to a ride request
+ *     security:
+ *       - bearerAuth: []
  *     tags: [RideRequest]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/OfferInput'
+ *             type: object
+ *             required: [request_id, offered_price]
+ *             properties:
+ *               request_id:
+ *                 type: string
+ *               offered_price:
+ *                 type: number
+ *               days:
+ *                 type: integer
+ *               hours:
+ *                 type: integer
+ *               minutes:
+ *                 type: integer
  *     responses:
  *       200:
  *         description: Offer added or updated
- */
-/**
- * @desc Truck driver adds or updates an offer to a ride request
- * @route POST /api/ride-request/add-offer
+ *       400:
+ *         description: Missing or invalid IDs
+ *       404:
+ *         description: Ride request not found
  */
 const addOfferToRideRequest = async (req, res, next) => {
   try {
-    let { request_id, truck_id, offered_price, days, hours, minutes } =
-      req.body;
+    const truckId = req.user.id;
+    let { request_id, offered_price, days, hours, minutes } = req.body;
 
-    if (!request_id || !truck_id || offered_price == null) {
-      return next(
-        new Error("request_id, truck_id, and offered_price are required.")
-      );
+    if (!request_id || offered_price == null) {
+      return res.status(400).json({
+        success: false,
+        message: "request_id and offered_price are required."
+      });
     }
 
-    // Set defaults
-    days = parseInt(days ?? 0, 10);
-    hours = parseInt(hours ?? 0, 10);
-    minutes = parseInt(minutes ?? 0, 10);
+    if (
+      !mongoose.Types.ObjectId.isValid(request_id) ||
+      !mongoose.Types.ObjectId.isValid(truckId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request_id or truck_id."
+      });
+    }
 
+    days    = parseInt(days ?? 0,   10);
+    hours   = parseInt(hours ?? 0,  10);
+    minutes = parseInt(minutes ?? 0,10);
     const time_to_reach = `${days}d ${hours}h ${minutes}m`;
 
-    if (!request_id || !truck_id || !offered_price || !time_to_reach) {
-      return next(
-        new Error(
-          "request_id, truck_id, offered_price and time_to_reach are required."
-        )
-      );
-    }
+    const rideReqObjectId   = new mongoose.Types.ObjectId(request_id);
+    const truckUserObjectId = new mongoose.Types.ObjectId(truckId);
 
-    const rideRequestObjectId = new ObjectId(request_id);
-    const truckUserObjectId = new ObjectId(truck_id);
-
-    // Try to update existing offer
     const updateResult = await RideRequest.updateOne(
-      {
-        _id: rideRequestObjectId,
-        "offers.truck_id": truckUserObjectId,
-      },
+      { _id: rideReqObjectId, "offers.truck_id": truckUserObjectId },
       {
         $set: {
           "offers.$.offered_price": offered_price,
-          "offers.$.time_to_reach": time_to_reach,
+          "offers.$.time_to_reach":  time_to_reach,
         },
       }
     );
 
     if (updateResult.modifiedCount === 0) {
-      // No existing offer from this truck — push a new one
       const pushResult = await RideRequest.updateOne(
-        { _id: rideRequestObjectId },
+        { _id: rideReqObjectId },
         {
           $push: {
             offers: {
-              truck_id: truckUserObjectId,
+              truck_id:      truckUserObjectId,
               offered_price,
               time_to_reach,
             },
           },
         }
       );
-
       if (pushResult.modifiedCount === 0) {
-        return next(new Error("Ride request not found."));
+        return res.status(404).json({
+          success: false,
+          message: "Ride request not found.",
+        });
       }
-
       return sendSuccessResponse(res, "New offer added successfully.");
     }
 

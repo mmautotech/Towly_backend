@@ -1,6 +1,5 @@
 // controllers/auth/forgotPassword.js
 const { User } = require("../../models");
-const sendSuccessResponse = require("../../utils/success-response");
 
 /**
  * @swagger
@@ -14,6 +13,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - phone
+ *               - password
  *             properties:
  *               phone:
  *                 type: string
@@ -23,13 +25,23 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 example: newSecurePassword
  *     responses:
  *       200:
- *         description: Password updated successfully
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: password changed
  *       404:
  *         description: User not found
+ *       500:
+ *         description: Server error
  */
 /**
- * @desc  🔄 Forgot Password: update password using phone number
- * @route POST /auth/forgot-password
+ * @desc   🔄 Forgot Password: update password using phone number
+ * @route  POST /auth/forgot-password
  * @access Public
  */
 const forgotPassword = async (req, res, next) => {
@@ -37,18 +49,17 @@ const forgotPassword = async (req, res, next) => {
     const { phone, password } = req.body;
     const user = await User.findOne({ phone });
     if (!user) {
-      return next(new Error("User with this phone number does not exist."));
+      // delegate to error middleware to format your error response
+      return next(new Error("User with this phone number does not exist!"));
     }
 
     user.password = password;
     await user.save();
 
-    const token = user.generateToken();
-    sendSuccessResponse(res, "Password updated successfully.", {
-      user_id: user._id,
-    });
-  } catch (error) {
-    next(error);
+    // minimal success response
+    return res.status(200).json({ message: "password changed successfully." });
+  } catch (err) {
+    next(err);
   }
 };
 

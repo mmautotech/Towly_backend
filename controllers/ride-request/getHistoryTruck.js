@@ -6,28 +6,60 @@ const sendSuccessResponse = require("../../utils/success-response");
 /**
  * @swagger
  * /ride-requests/history/truck:
- *   post:
- *     summary: Get all ride requests a truck has made offers on
+ *   get:
+ *     summary: Get all ride requests this truck user has offered on
  *     tags: [RideRequest]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [truck_id]
- *             properties:
- *               truck_id:
- *                 type: string
- *                 example: 6821aa5ae16d78d414a1266e
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Ride requests with this truck's offers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       request_id:
+ *                         type: string
+ *                       ride_status:
+ *                         type: object
+ *                         properties:
+ *                           code:
+ *                             type: string
+ *                           label:
+ *                             type: string
+ *                       pickup_date:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       origin_location:
+ *                         type: object
+ *                       dest_location:
+ *                         type: object
+ *                       vehicle:
+ *                         type: object
+ *                       offer:
+ *                         type: object
+ *                         nullable: true
  */
 const getHistoryTruck = async (req, res, next) => {
   try {
-    const { truck_id } = req.body;
-    if (!truck_id) return next(new Error("truck_id is required."));
+    // truck_id from JWT
+    const truck_id = req.user.id;
 
     const rideRequests = await RideRequest.find({
       offers: {

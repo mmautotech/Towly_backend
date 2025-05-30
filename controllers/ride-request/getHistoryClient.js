@@ -6,20 +6,11 @@ const sendSuccessResponse = require("../../utils/success-response");
 /**
  * @swagger
  * /ride-requests/history:
- *   post:
- *     summary: Get completed and cancelled ride requests for a client
+ *   get:
+ *     summary: Get completed & cancelled rides for the logged-in client
  *     tags: [RideRequest]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [user_id]
- *             properties:
- *               user_id:
- *                 type: string
- *                 example: 66219f761ec2b76be761afc1
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Completed and cancelled ride requests returned
@@ -34,6 +25,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                   type: string
  *                 timestamp:
  *                   type: string
+ *                   format: date-time
  *                 data:
  *                   type: array
  *                   items:
@@ -91,8 +83,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const getHistoryClient = async (req, res, next) => {
   try {
-    const { user_id } = req.body;
-    if (!user_id) return next(new Error("User ID is required."));
+    // pull the client’s ID from the validated JWT
+    const user_id = req.user.id;
 
     const requests = await RideRequest.find({
       user_id: new ObjectId(user_id),

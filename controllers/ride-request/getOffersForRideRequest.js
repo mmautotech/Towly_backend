@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
+const { formatBase64Image } = require("../../utils/profile-helper");
 
 /**
  * @swagger
@@ -112,23 +113,28 @@ const getOffersForRideRequest = async (req, res, next) => {
       const driver_profile = truck_profile?.driver_profile;
       const vehicle_profile = truck_profile?.vehicle_profile;
 
+      // 1) determine display name (unchanged)
       let name = truck?.user_name || "Unknown";
-      let profile_photo = "";
-
       if (vehicle_profile?.make && vehicle_profile?.model) {
         name = `${vehicle_profile.make} ${vehicle_profile.model}`;
       } else if (driver_profile?.first_name && driver_profile?.last_name) {
         name = `${driver_profile.first_name} ${driver_profile.last_name}`;
       }
 
-      if (vehicle_profile?.vehicle_photo?.data) {
-        profile_photo = `data:${
-          vehicle_profile.vehicle_photo.content_type
-        };base64,${vehicle_profile.vehicle_photo.data.toString("base64")}`;
+      // 2) determine photo exactly as in getBasicTruckInfo
+      let profile_photo = "";
+      const compImg = vehicle_profile?.vehicle_photo?.compressed;
+      const origImg = vehicle_profile?.vehicle_photo?.original;
+
+      if (compImg?.data) {
+        profile_photo = formatBase64Image(compImg.data, compImg.contentType);
+      } else if (origImg?.data) {
+        profile_photo = formatBase64Image(origImg.data, origImg.contentType);
       } else if (driver_profile?.license_selfie?.data) {
-        profile_photo = `data:${
-          driver_profile.license_selfie.content_type
-        };base64,${driver_profile.license_selfie.data.toString("base64")}`;
+        profile_photo = formatBase64Image(
+          driver_profile.license_selfie.data,
+          driver_profile.license_selfie.contentType
+        );
       }
 
       return {
@@ -143,6 +149,7 @@ const getOffersForRideRequest = async (req, res, next) => {
         client_counter_price: offer.client_counter_price ?? null,
       };
     });
+
 
     return res.status(200).json({
       success: true,

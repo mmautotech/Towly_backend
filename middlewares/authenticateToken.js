@@ -1,9 +1,9 @@
+// middlewares/authenticateToken.js
 const jwt = require("jsonwebtoken");
 
 const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
@@ -12,18 +12,10 @@ const authenticateToken = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Token missing from header",
-      });
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
+    // Attach only the user’s ID to req.user
     req.user = { id: decoded.id };
-
     next();
   } catch (err) {
     console.error("Token verification failed:", err.message);

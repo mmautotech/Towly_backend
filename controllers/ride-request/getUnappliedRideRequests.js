@@ -1,7 +1,10 @@
+// controllers/ride-request/getUnappliedRide_postedRequests.js
+
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const { formatBase64Image } = require("../../utils/profile-helper");
 
 /**
  * @swagger
@@ -51,20 +54,15 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                         type: string
  *                         example: "data:image/jpeg;base64,/9j/..."
  */
-
 const getUnappliedRide_postedRequests = async (req, res, next) => {
   try {
-    const truck_id = req.user.id; // ✅ Get from JWT
-    const truckObjectId = new ObjectId(truck_id);
+    const truckObjectId = new ObjectId(req.user.id);
 
-    // Find all "posted" requests this truck hasn't applied to
     const requests = await RideRequest.find({
       status: "posted",
       offers: {
         $not: {
-          $elemMatch: {
-            truck_id: truckObjectId,
-          },
+          $elemMatch: { truck_id: truckObjectId },
         },
       },
     })
@@ -76,24 +74,30 @@ const getUnappliedRide_postedRequests = async (req, res, next) => {
 
     const formatted = requests.map((r) => {
       const profile = r.user_id?.client_profile || {};
-      const fullName = `${profile.first_name || ""} ${
-        profile.last_name || ""
-      }`.trim();
+      const fullName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
       const username = fullName || r.user_id?.user_name || "Unknown";
 
+      // choose compressed if available, otherwise original
       let user_photo = "";
-      if (profile.profile_photo?.data) {
-        const b64 = profile.profile_photo.data.toString("base64");
-        user_photo = `data:${profile.profile_photo.contentType};base64,${b64}`;
+      if (profile.profile_photo?.compressed?.data) {
+        user_photo = formatBase64Image(
+          profile.profile_photo.compressed.data,
+          profile.profile_photo.compressed.contentType
+        );
+      } else if (profile.profile_photo?.data) {
+        user_photo = formatBase64Image(
+          profile.profile_photo.data,
+          profile.profile_photo.contentType
+        );
       }
 
       return {
-        request_id: r._id,
+        request_id:      r._id.toString(),
         origin_location: r.origin_location,
-        dest_location: r.dest_location,
+        dest_location:   r.dest_location,
         vehicle_details: r.vehicle_details,
-        pickup_date: r.pickup_date,
-        updatedAt: r.updatedAt,
+        pickup_date:     r.pickup_date,
+        updatedAt:       r.updatedAt,
         username,
         user_photo,
       };

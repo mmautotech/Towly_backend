@@ -1,16 +1,21 @@
+// controllers/ride-request/getAppliedRide_postedRequests.js
+
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const { formatBase64Image } = require("../../utils/profile-helper");
 
 /**
  * @swagger
  * /ride-requests/applied:
  *   post:
- *     summary: Get ride requests that the truck has already applied to (auth required)
+ *     summary: Get ride requests that the truck has already applied to
  *     tags: [RideRequest]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
  *     responses:
  *       200:
  *         description: Applied ride requests returned
@@ -25,7 +30,6 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                   type: string
  *                 timestamp:
  *                   type: string
- *                   format: date-time
  *                 data:
  *                   type: array
  *                   items:
@@ -41,10 +45,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                         $ref: '#/components/schemas/Vehicle'
  *                       pickup_date:
  *                         type: string
- *                         format: date-time
  *                       updatedAt:
  *                         type: string
- *                         format: date-time
  *                       username:
  *                         type: string
  *                         example: "Ahmed Khan"
@@ -68,11 +70,10 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                           updatedAt:
  *                             type: string
  */
-
 const getAppliedRide_postedRequests = async (req, res, next) => {
   try {
-    const truck_id = req.user.id; // ✅ From JWT
-    const truckObjectId = new ObjectId(truck_id);
+    const truckId = req.user.id;
+    const truckObjectId = new ObjectId(truckId);
 
     const requests = await RideRequest.find({
       status: "posted",
@@ -85,41 +86,50 @@ const getAppliedRide_postedRequests = async (req, res, next) => {
       .lean();
 
     const formatted = requests.map((r) => {
-      const offer = (r.offers || []).find(
-        (o) => o.truck_id.toString() === truck_id
-      );
+      // find the offer this truck submitted
+      const offerDoc = (r.offers || []).find(o =>
+        o.truck_id.toString() === truckId
+      ) || {};
 
+      // prepare offer payload
+      const offer = {
+        offer_id:             offerDoc._id?.toString(),
+        offered_price:        offerDoc.offered_price,
+        time_to_reach:        offerDoc.time_to_reach,
+        client_counter_price: offerDoc.client_counter_price ?? null,
+        createdAt:            offerDoc.createdAt,
+        updatedAt:            offerDoc.updatedAt,
+      };
+
+      // user profile
       const profile = r.user_id?.client_profile || {};
-      const fullName = `${profile.first_name || ""} ${
-        profile.last_name || ""
-      }`.trim();
+      const fullName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
       const username = fullName || r.user_id?.user_name || "Unknown";
 
+      // choose compressed photo if available
       let user_photo = "";
-      if (profile.profile_photo?.data) {
-        const b64 = profile.profile_photo.data.toString("base64");
-        user_photo = `data:${profile.profile_photo.contentType};base64,${b64}`;
+      if (profile.profile_photo?.compressed?.data) {
+        user_photo = formatBase64Image(
+          profile.profile_photo.compressed.data,
+          profile.profile_photo.compressed.contentType
+        );
+      } else if (profile.profile_photo?.data) {
+        user_photo = formatBase64Image(
+          profile.profile_photo.data,
+          profile.profile_photo.contentType
+        );
       }
 
       return {
-        request_id: r._id,
+        request_id:      r._id.toString(),
         origin_location: r.origin_location,
-        dest_location: r.dest_location,
+        dest_location:   r.dest_location,
         vehicle_details: r.vehicle_details,
-        pickup_date: r.pickup_date,
-        updatedAt: r.updatedAt,
+        pickup_date:     r.pickup_date,
+        updatedAt:       r.updatedAt,
         username,
         user_photo,
-        offer: offer
-          ? {
-              offer_id: offer._id,
-              offered_price: offer.offered_price,
-              time_to_reach: offer.time_to_reach,
-              client_counter_price: offer.client_counter_price ?? null,
-              createdAt: offer.createdAt,
-              updatedAt: offer.updatedAt,
-            }
-          : null,
+        offer,
       };
     });
 

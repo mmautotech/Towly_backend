@@ -44,6 +44,6 @@ module.exports = {
 
   // Settings Controllers
   // these two export the function directly:
-  updateSettings, // updateSettings (Client and Driver)
   getSettings, // getSettings (Client and Driver)
+  updateSettings, // updateSettings (Client and Driver)
 };

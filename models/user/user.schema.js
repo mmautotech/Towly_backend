@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const client_profile_schema = require("./clientProfile.schema");
-const driver_profile_schema = require("./driverProfile.schema");
-const vehicle_profile_schema = require("./vehicleProfile.schema");
-const setting_schema = require("./setting.schema");
+const clientProfileSchema  = require("./clientProfile.schema");
+const driverProfileSchema  = require("./driverProfile.schema");
+const vehicleProfileSchema = require("./vehicleProfile.schema");
+const settingSchema        = require("./setting.schema");
 
 const user_schema = new mongoose.Schema(
   {
@@ -46,22 +46,24 @@ const user_schema = new mongoose.Schema(
 
     // Optional embedded profile with no unique constraints
     client_profile: {
-      type: client_profile_schema,
+      type: clientProfileSchema,
       default: undefined,
     },
+
     truck_profile: {
       driver_profile: {
-        type: driver_profile_schema,
+        type: driverProfileSchema,
         default: undefined,
       },
       vehicle_profile: {
-        type: vehicle_profile_schema,
+        type: vehicleProfileSchema,
         default: undefined,
       },
     },
+
     settings: {
-      client_settings: { type: setting_schema, default: undefined },
-      truck_settings: { type: setting_schema, default: undefined },
+      client_settings: { type: settingSchema, default: undefined },
+      truck_settings:  { type: settingSchema, default: undefined },
     },
   },
   {

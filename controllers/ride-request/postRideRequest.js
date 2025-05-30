@@ -1,65 +1,65 @@
+// controllers/ride-request/postRideRequest.js
 const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
 const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+
 /**
  * @swagger
  * /ride-request/post:
  *   patch:
  *     summary: Post a created ride request
  *     tags: [RideRequest]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [user_id, request_id]
+ *             required: [request_id]
  *             properties:
- *               user_id:
- *                 type: string
  *               request_id:
  *                 type: string
+ *                 example: 603d2f8e2f8c1b2a88f4db3c
  *     responses:
  *       200:
  *         description: Ride request posted successfully
  */
-/**
- * @desc Change ride request status to 'posted'
- * @route PATCH /api/ride-request/post
- */
 const postRideRequest = async (req, res, next) => {
   try {
-    const { user_id, request_id } = req.body;
+    const userId    = req.user.id;
+    const { request_id } = req.body;
 
-    if (!user_id || !request_id) {
-      return next(new Error("user_id and request_id are required."));
+    // 1) Basic ID format check
+    if (!mongoose.Types.ObjectId.isValid(request_id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid request_id" });
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(user_id) ||
-      !mongoose.Types.ObjectId.isValid(request_id)
-    ) {
-      return res.status(400).json({ message: "Invalid user_id or request_id" });
-    }
-
-    const updatedRequest = await RideRequest.findOneAndUpdate(
+    // 2) Attempt the update
+    const updated = await RideRequest.findOneAndUpdate(
       {
-        user_id: new ObjectId(user_id),
-        _id: new ObjectId(request_id),
-        status: "created",
+        user_id: userId,       // ← from JWT
+        _id:     request_id,
+        status:  "created",
       },
       { status: "posted" },
       { new: true }
     );
 
-    if (!updatedRequest) {
-      return next(new Error("Ride request not found or already posted."));
+    // 3) Not found or already posted?
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ride request not found or already posted." });
     }
 
+    // 4) Success
     return sendSuccessResponse(res, "Ride request posted successfully.");
-  } catch (error) {
-    return next(error);
+  } catch (err) {
+    return next(err);
   }
 };
 
