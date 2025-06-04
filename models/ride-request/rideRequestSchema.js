@@ -1,7 +1,9 @@
+// rideRequestSchema.js
+
 const mongoose = require("mongoose");
 const geoPointSchema = require("../user/geoPoint.schema");
-const vehicleSchema = require("./vehicleSchema");
-const offerSchema = require("./offerSchema");
+const vehicleSchema   = require("./vehicleSchema");
+const offerSchema     = require("./offerSchema");
 
 const RideRequestSchema = new mongoose.Schema(
   {
@@ -11,14 +13,13 @@ const RideRequestSchema = new mongoose.Schema(
       required: true,
     },
     origin_location: geoPointSchema,
-    dest_location: geoPointSchema,
-    pickup_date: { type: Date, required: true },
+    dest_location:   geoPointSchema,
+    pickup_date:     { type: Date, required: true },
     vehicle_details: vehicleSchema,
-    offers: [offerSchema],
+    offers:          [offerSchema],
     accepted_offer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Offer",
-      required: false,
     },
     status: {
       type: String,
@@ -29,8 +30,17 @@ const RideRequestSchema = new mongoose.Schema(
   { timestamps: true, collection: "ride_requests" }
 );
 
+// Geospatial indexes for fast $geoWithin / $near queries
 RideRequestSchema.index({ origin_location: "2dsphere" });
-RideRequestSchema.index({ dest_location: "2dsphere" });
+RideRequestSchema.index({ dest_location:   "2dsphere" });
+
+// PERFORMANCE INDEXES
+// Index by user to speed up lookups of a client’s rides
+RideRequestSchema.index({ user_id: 1 });
+// Index on each offer’s _id for quick sub-document lookups
+RideRequestSchema.index({ "offers._id": 1 });
+// Index on status to quickly filter by ride lifecycle phase
+RideRequestSchema.index({ status: 1 });
 
 RideRequestSchema.pre("validate", function (next) {
   if (Array.isArray(this.offers)) {
