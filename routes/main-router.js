@@ -67,6 +67,7 @@ const {
   getHistoryClient,
   getHistoryTruck,
   getTrackingInfoByUser,
+  getActiveServiceByTruck, // ← newly added controller import
 } = require("../controllers/ride-request");
 
 const {
@@ -84,9 +85,9 @@ router.post("/auth/forgot-password", validateRequest(forgot_password_schema), fo
 // ─── RIDE REQUEST ROUTES ───────────────────────────────────
 router.post(
   "/ride-request/create",
-  authenticateToken,                
-  validateRequest(ride_request_schema), 
-  createRideRequest                
+  authenticateToken,
+  validateRequest(ride_request_schema),
+  createRideRequest
 );
 router.patch(
   "/ride-request/post",
@@ -122,6 +123,14 @@ router.get(
   getAppliedRide_postedRequests
 );
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
+
+// ─── GET ACTIVE SERVICE FOR TRUCK ─────────────────────────
+router.get(
+  "/ride-requests/active/truck",
+  authenticateToken,
+  getActiveServiceByTruck
+);
+
 router.post(
   "/ride-request/offers",
   authenticateToken,
@@ -141,12 +150,13 @@ router.patch(
   validateRequest(add_counter_offer_schema),
   addCounterOfferToRideRequest
 );
+
 // ─── USER ROUTES ────────────────────────────────────────────
-router.post( "/user",                          authenticateToken, getBasicUserInfo);
-router.get(  "/truck",                        authenticateToken, getBasicTruckInfo);
-router.post("/client/update-rating",          authenticateToken, UpdateRatingClient);
-router.post("/vehicle/update-rating",         authenticateToken, UpdateRatingVehicle);
-router.post("/vehicle/update-location",       authenticateToken, UpdateLocationVehicle);
+router.post("/user",                    authenticateToken, getBasicUserInfo);
+router.get( "/truck",                  authenticateToken, getBasicTruckInfo);
+router.post("/client/update-rating",   authenticateToken, UpdateRatingClient);
+router.post("/vehicle/update-rating",  authenticateToken, UpdateRatingVehicle);
+router.post("/vehicle/update-location",authenticateToken, UpdateLocationVehicle);
 
 // ─── CLIENT PROFILE ROUTES ────────────────────────────────
 router.get(
@@ -207,13 +217,11 @@ router.get(
 );
 
 // ─── SETTINGS ROUTES ──────────────────────────────────────
-// retrieve settings
 router.get(
   "/user/settings",
   authenticateToken,
   getSettings
 );
-// update settings (you chose GET for updates)
 router.get(
   "/user/settings/update",
   authenticateToken,
