@@ -1,5 +1,3 @@
-// controllers/ride-request/acceptRideRequest.js
-
 const mongoose = require("mongoose");
 const { RideRequest, User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
@@ -24,10 +22,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *             properties:
  *               request_id:
  *                 type: string
- *                 example: "603d2f8e2f8c1b2a88f4db3c"
  *               offer_id:
  *                 type: string
- *                 example: "603d2f8e2f8c1b2a88f4db4d"
  *     responses:
  *       200:
  *         description: Offer accepted successfully.
@@ -38,59 +34,50 @@ const sendSuccessResponse = require("../../utils/success-response");
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Offer accepted successfully"
  *                 data:
  *                   type: object
  *                   properties:
  *                     request_id:
  *                       type: string
- *                       example: "603d2f8e2f8c1b2a88f4db3c"
  *                     offer_id:
  *                       type: string
- *                       example: "603d2f8e2f8c1b2a88f4db4d"
- *       400:
- *         description: Missing or invalid IDs.
- *       404:
- *         description: Ride request not found, not posted, or offer_id invalid.
  */
 const acceptRideRequest = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { request_id, offer_id } = req.body;
 
-    // 1) Basic presence check
+    // 🔍 Validate input
     if (!request_id || !offer_id) {
       return res.status(400).json({
         success: false,
-        message: "request_id and offer_id are required."
+        message: "Both request_id and offer_id are required.",
       });
     }
 
-    // 2) Validate ObjectId format
     if (
       !mongoose.Types.ObjectId.isValid(request_id) ||
       !mongoose.Types.ObjectId.isValid(offer_id)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid request_id or offer_id."
+        message: "Invalid request_id or offer_id format.",
       });
     }
 
-    // 3) Find + update only if it belongs to this user, is still “posted” and contains that offer
+    // 🚚 Update ride request
     const updated = await RideRequest.findOneAndUpdate(
       {
-        _id: new mongoose.Types.ObjectId(request_id),
-        user_id: new mongoose.Types.ObjectId(userId),
+        _id: request_id,
+        user_id: userId,
         status: "posted",
-        "offers._id": new mongoose.Types.ObjectId(offer_id),
+        "offers._id": offer_id,
       },
       {
         status: "accepted",
-        accepted_offer: new mongoose.Types.ObjectId(offer_id),
+        accepted_offer: offer_id,
       },
       { new: true }
     );
@@ -98,39 +85,58 @@ const acceptRideRequest = async (req, res, next) => {
     if (!updated) {
       return res.status(404).json({
         success: false,
-        message: "Ride request not found, not posted, or offer_id invalid."
+        message: "Ride request not found, not posted, or invalid offer.",
       });
     }
 
-    // 4) Notify the truck via Socket.IO
+    // 📦 Find accepted offer
     const acceptedOffer = updated.offers.id(offer_id);
-    if (acceptedOffer) {
-      const io = req.app.get("io");
-      if (io) {
-        io.to(`truck_${acceptedOffer.truck_id.toString()}`).emit("offerAccepted", {
-          request_id:   updated._id.toString(),
-          offer_id,
-          client_id:    updated.user_id.toString(),
-          client_name:  updated.user_name, // or fetch from User model if needed
-          offered_price: acceptedOffer.offered_price,
-          origin: {
-            latitude:  updated.origin_location.coordinates[1],
-            longitude: updated.origin_location.coordinates[0],
-          },
-          destination: {
-            latitude:  updated.dest_location.coordinates[1],
-            longitude: updated.dest_location.coordinates[0],
-          },
-        });
-      }
+    if (!acceptedOffer) {
+      return res.status(500).json({
+        success: false,
+        message: "Accepted offer not found in ride request.",
+      });
     }
 
-    // 5) Return success
+    // 👤 Find client user name
+    const clientUser = await User.findById(updated.user_id).select("user_name");
+
+    // 📡 Notify truck via socket
+    const io = req.app.get("io");
+    if (io) {
+      const truckRoom = `truck_${acceptedOffer.truck_id.toString()}`;
+      const payload = {
+        request_id: updated._id.toString(),
+        offer_id,
+        client_id: updated.user_id.toString(),
+        client_name: clientUser?.user_name || "Client",
+        offered_price: acceptedOffer.offered_price,
+        origin: {
+          latitude: updated.origin_location.coordinates[1],
+          longitude: updated.origin_location.coordinates[0],
+        },
+        destination: {
+          latitude: updated.dest_location.coordinates[1],
+          longitude: updated.dest_location.coordinates[0],
+        },
+      };
+
+      console.log("🔔 Emitting 'offerAccepted' to:", truckRoom);
+      console.log("📦 Payload:", payload);
+
+      io.to(truckRoom).emit("offerAccepted", payload);
+    } else {
+      console.warn("⚠️ Socket.IO instance not available on req.app");
+    }
+
+    // ✅ Respond to client
     return sendSuccessResponse(res, "Offer accepted successfully", {
       request_id: updated._id.toString(),
       offer_id,
     });
+
   } catch (err) {
+    console.error("❌ acceptRideRequest error:", err.message);
     next(err);
   }
 };

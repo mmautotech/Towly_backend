@@ -6,8 +6,8 @@ const acceptRideRequest = require("./acceptRideRequest");
 
 const getActiveRideRequestsByUser = require("./getActiveRideRequestsByUser");
 const getActiveServiceByTruck = require("./getActiveServiceByTruck");
+const getServiceByRequestId = require("./getServiceByRequestId");
 const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
-const getAcceptedRide_postedRequests = require("./getAcceptedRideRequests");
 const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
 const getHistoryClient = require("./getHistoryClient");
 const getHistoryTruck = require("./getHistoryTruck");
@@ -15,7 +15,6 @@ const getTrackingInfoByUser = require("./getTrackingInfoByUser");
 
 // Offers related
 const getOffersForRideRequest = require("./getOffersForRideRequest");
-const getSingleTruckOffer = require("./getSingleTruckOffer");
 const addOfferToRideRequest = require("./addOfferToRideRequest");
 const addCounterOfferToRideRequest = require("./addCounterOfferToRideRequest");
 
@@ -24,17 +23,20 @@ module.exports = {
   postRideRequest,
   cancelRideRequest,
   acceptRideRequest,
+
   getActiveRideRequestsByUser,
   getActiveServiceByTruck,
-  getAppliedRide_postedRequests,
-  getAcceptedRide_postedRequests,
+  getServiceByRequestId,
+
   getUnappliedRide_postedRequests,
+  getAppliedRide_postedRequests,
+
+  // Offers related
+  getOffersForRideRequest,
+  addOfferToRideRequest,
+  addCounterOfferToRideRequest,
+
   getHistoryClient,
   getHistoryTruck,
   getTrackingInfoByUser,
-  // Offers related
-  getOffersForRideRequest,
-  getSingleTruckOffer,
-  addOfferToRideRequest,
-  addCounterOfferToRideRequest,
 };

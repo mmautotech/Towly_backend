@@ -58,24 +58,30 @@ const {
   postRideRequest,
   cancelRideRequest,
   acceptRideRequest,
+
   getActiveRideRequestsByUser,
+  getActiveServiceByTruck, // ← newly added controller import
+  getServiceByRequestId,
+
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,
+
+  // Offers related
   getOffersForRideRequest,
   addOfferToRideRequest,
   addCounterOfferToRideRequest,
+
   getHistoryClient,
   getHistoryTruck,
   getTrackingInfoByUser,
-  getActiveServiceByTruck, // ← newly added controller import
 } = require("../controllers/ride-request");
 
 const {
   sendMessage,
-  getMessagesByUser,
   markMessageRead,
-  getConversationBetweenUsers,
-} = require("../controllers/message/message");
+  getChat,
+  deleteMessage
+} = require("../controllers/message");
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
 router.post("/auth/register",        validateRequest(signup_schema),         registerUser);
@@ -129,6 +135,12 @@ router.get(
   "/ride-requests/active/truck",
   authenticateToken,
   getActiveServiceByTruck
+);
+
+router.get(
+  "/truck/services/:requestId",
+  authenticateToken,
+  getServiceByRequestId
 );
 
 router.post(
@@ -229,9 +241,9 @@ router.get(
 );
 
 // ─── MESSAGING ROUTES ────────────────────────────────────
-router.post("/messages/send",                   sendMessage);
-router.get( "/messages/user/:userId",           getMessagesByUser);
-router.patch("/messages/:messageId/read",       markMessageRead);
-router.get( "/messages/conversation/:userId1/:userId2", getConversationBetweenUsers);
+router.get(   "/messages",             authenticateToken, getChat);
+router.post(  "/message/send",        authenticateToken, sendMessage);
+router.patch( "/message/read/:id",    authenticateToken, markMessageRead);
+router.patch( "/message/delete/:id",  authenticateToken, deleteMessage);
 
 module.exports = router;
