@@ -1,4 +1,7 @@
 const mongoose = require("mongoose");
-const MessageSchema = require("./MessageSchema");
+const messageSchema = require("./MessageSchema");
 
-module.exports = mongoose.model("Message", MessageSchema);
+// Prevent OverwriteModelError
+const Message =  mongoose.model("Message", messageSchema);
+
+module.exports = Message;

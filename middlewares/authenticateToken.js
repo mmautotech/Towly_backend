@@ -14,8 +14,12 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    // Attach only the user’s ID to req.user
-    req.user = { id: decoded.id };
+    // ✅ Attach both ID and ROLE
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,  // This is crucial for identifying the room
+    };
+
     next();
   } catch (err) {
     console.error("Token verification failed:", err.message);

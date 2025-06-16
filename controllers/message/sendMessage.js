@@ -1,8 +1,15 @@
+const Message = require('../../models/Message');
+
+// Helper to create consistent shared room names
+const generateChatRoom = (id1, id2) => {
+  return `chat_${[id1, id2].sort().join('_')}`;
+};
+
 /**
  * @swagger
  * /api/message/send:
  *   post:
- *     summary: Send a message to another user
+ *     summary: Send a message from any authenticated user to another user
  *     tags:
  *       - Messaging
  *     security:
@@ -13,71 +20,63 @@
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - receiverId
+ *               - message
  *             properties:
  *               receiverId:
  *                 type: string
- *                 example: "6658f1c4a2a8b9d1a64b1234"
+ *                 description: ID of the user receiving the message
  *               message:
  *                 type: string
- *                 example: "Hi, I need towing help!"
+ *                 description: The content of the message
  *     responses:
- *       201:
- *         description: Message sent successfully
+ *       200:
+ *         description: Message successfully sent
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
  *                 data:
  *                   $ref: '#/components/schemas/Message'
  *       400:
- *         description: receiverId and message are required
- *       401:
- *         description: Unauthorized or token missing
+ *         description: Missing required fields
  *       500:
- *         description: Failed to send message
+ *         description: Server error
  */
 
-const Message = require("../../models/Message");
-
-const sendMessage = async (req, res) => {
+exports.sendMessage = async (req, res) => {
   try {
+    const io = req.app.get('io');
     const senderId = req.user.id;
     const { receiverId, message } = req.body;
 
     if (!receiverId || !message) {
-      return res.status(400).json({ error: "receiverId and message are required." });
+      return res.status(400).json({ error: 'receiverId and message are required' });
     }
 
-    const newMessage = new Message({
+    // 1. Create message with status "sent"
+    const savedMessage = await Message.create({
       senderId,
       receiverId,
       message,
       status: 'sent',
+      timestamp: new Date(),
     });
 
-    await newMessage.save();
+    // 2. Emit to shared chat room
+    const chatRoom = generateChatRoom(senderId, receiverId);
+    io.to(chatRoom).emit('message-received', savedMessage);
+    console.log(`📢 Emitted message to room: ${chatRoom}`);
 
-    // Emit via Socket.IO to the receiver's room
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`user_${receiverId}`).emit("new-message", newMessage);
-    }
+    // 3. Update the message to "delivered" after emitting
+    savedMessage.status = 'delivered';
+    await savedMessage.save();
 
-    res.status(201).json({
-      success: true,
-      message: "Message sent successfully.",
-      data: newMessage,
-    });
-
-  } catch (error) {
-    console.error("sendMessage error:", error);
-    res.status(500).json({ error: "Failed to send message." });
+    return res.status(200).json({ data: savedMessage });
+  } catch (err) {
+    console.error('❌ sendMessage error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-module.exports = sendMessage;

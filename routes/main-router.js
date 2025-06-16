@@ -60,8 +60,8 @@ const {
   acceptRideRequest,
 
   getActiveRideRequestsByUser,
-  getActiveServiceByTruck, // ← newly added controller import
-  getServiceByRequestId,
+  getDriverTrackingByClient,
+  getActiveServiceByTruck, 
 
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,
@@ -78,9 +78,9 @@ const {
 
 const {
   sendMessage,
-  markMessageRead,
   getChat,
-  deleteMessage
+  markMessageRead,
+  deleteMessage,
 } = require("../controllers/message");
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
@@ -130,17 +130,17 @@ router.get(
 );
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
+// ─── GET Driver Tracking FOR TRUCK ─────────────────────────
+router.get(
+  "/ride-requests/truck/tracking",
+  authenticateToken,
+  getDriverTrackingByClient
+);
 // ─── GET ACTIVE SERVICE FOR TRUCK ─────────────────────────
 router.get(
   "/ride-requests/active/truck",
   authenticateToken,
   getActiveServiceByTruck
-);
-
-router.get(
-  "/truck/services/:requestId",
-  authenticateToken,
-  getServiceByRequestId
 );
 
 router.post(
@@ -242,8 +242,8 @@ router.get(
 
 // ─── MESSAGING ROUTES ────────────────────────────────────
 router.get(   "/messages",             authenticateToken, getChat);
-router.post(  "/message/send",        authenticateToken, sendMessage);
-router.patch( "/message/read/:id",    authenticateToken, markMessageRead);
-router.patch( "/message/delete/:id",  authenticateToken, deleteMessage);
+router.post(  "/message/send",  authenticateToken, sendMessage);
+router.patch( "/message/read/:id",     authenticateToken, markMessageRead);
+router.patch( "/message/delete/:id",   authenticateToken, deleteMessage);
 
 module.exports = router;

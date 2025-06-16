@@ -54,7 +54,7 @@ io.use((socket, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    socket.user = { id: decoded.id };
+    socket.user = { id: decoded.id, role: decoded.role };
     next();
   } catch (err) {
     return next(new Error('Invalid or expired token'));
@@ -63,15 +63,32 @@ io.use((socket, next) => {
 
 // ─── Socket.IO Event Handling ────────────────────────────────────────────
 io.on('connection', (socket) => {
-  const truckId = socket.user.id;
-  console.log(`⚡ Truck ${truckId} connected via socket ${socket.id}`);
-  socket.join(`truck_${truckId}`);
+  const { id, role } = socket.user;
+
+  if (role === 'client') {
+    socket.join(`client_${id}`);
+    console.log(`📡 Client joined: client_${id}`);
+  } else if (role === 'truck') {
+    socket.join(`truck_${id}`);
+    console.log(`📡 Truck joined: truck_${id}`);
+  }
+
+  console.log(`✅ Socket connected: ${socket.id}`);
   console.log('🛏 Joined rooms:', [...socket.rooms]);
-  
+
+  // 🔁 Join shared chat room dynamically
+  socket.on('join-chat', ({ user1, user2 }) => {
+    if (!user1 || !user2) return;
+    const chatRoom = `chat_${[user1, user2].sort().join('_')}`;
+    socket.join(chatRoom);
+    console.log(`📥 ${socket.user.id} joined chat room: ${chatRoom}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
   });
 });
+
 
 // ─── Make Socket Instance Available ──────────────────────────────────────
 app.set('io', io);

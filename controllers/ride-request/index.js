@@ -5,8 +5,8 @@ const cancelRideRequest = require("./cancelRideRequest");
 const acceptRideRequest = require("./acceptRideRequest");
 
 const getActiveRideRequestsByUser = require("./getActiveRideRequestsByUser");
+const getDriverTrackingByClient = require("./getDriverTrackingByClient");
 const getActiveServiceByTruck = require("./getActiveServiceByTruck");
-const getServiceByRequestId = require("./getServiceByRequestId");
 const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
 const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
 const getHistoryClient = require("./getHistoryClient");
@@ -25,8 +25,8 @@ module.exports = {
   acceptRideRequest,
 
   getActiveRideRequestsByUser,
+  getDriverTrackingByClient,
   getActiveServiceByTruck,
-  getServiceByRequestId,
 
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,

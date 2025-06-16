@@ -40,10 +40,14 @@ const user_schema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["client", "driver", "admin"],
+      enum: ["client", "truck", "admin"],
       default: "client",
     },
-
+    status: {
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active",
+    },
     // Optional embedded profile with no unique constraints
     client_profile: {
       type: clientProfileSchema,

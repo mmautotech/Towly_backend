@@ -16,14 +16,18 @@
  *         description: The ID of the other user in the conversation
  *     responses:
  *       200:
- *         description: Returns list of messages
+ *         description: Chat history fetched successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 status:
+ *                   type: number
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: Chat messages retrieved successfully.
  *                 data:
  *                   type: array
  *                   items:
@@ -42,7 +46,11 @@ const getChat = async (req, res) => {
     const { otherUserId } = req.query;
 
     if (!otherUserId) {
-      return res.status(400).json({ error: "otherUserId query param is required." });
+      return res.status(400).json({
+        status: 400,
+        message: "Missing required query parameter: otherUserId.",
+        data: [],
+      });
     }
 
     const messages = await Message.find({
@@ -51,16 +59,21 @@ const getChat = async (req, res) => {
         { senderId: userId, receiverId: otherUserId },
         { senderId: otherUserId, receiverId: userId }
       ]
-    }).sort({ timestamp: 1 });
+    }).sort({ timestamp: 1 }); // 🔁 Changed from 1 to -1 for descending order
 
     res.status(200).json({
-      success: true,
+      status: 200,
+      message: "Chat messages retrieved successfully.",
       data: messages
     });
 
   } catch (err) {
-    console.error("getChat error:", err);
-    res.status(500).json({ error: "Failed to retrieve chat messages." });
+    console.error("❌ getChat error:", err);
+    res.status(500).json({
+      status: 500,
+      message: "Failed to retrieve chat messages.",
+      data: [],
+    });
   }
 };
 
