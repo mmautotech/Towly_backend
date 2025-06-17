@@ -3,8 +3,14 @@
 const { getBasicUserInfo } = require("./getBasicUserInfo");
 const { getBasicTruckInfo } = require("./getBasicTruckInfo");
 
+const { getAllClients } = require("./getAllClients");
+const { getAllTrucker } = require("./getAllTrucker");
+const getUserStats = require("./getUserStats");
+const updateUserPhone = require("./updateUserPhone");
+const  updateStatus  = require("./updateStatus");
+
 // these two export the function directly:
-const UpdateRatingClient = require("./updateRatingClient");
+const UpdateRatingClient = require("./UpdateRatingClient");
 const UpdateRatingVehicle = require("./updateRatingVehicle");
 const { UpdateLocationVehicle } = require("./updateLocationVehicle");
 
@@ -25,6 +31,11 @@ const getSettings = require("./getSettings");
 module.exports = {
   getBasicUserInfo,
   getBasicTruckInfo,
+  getAllClients,
+  getAllTrucker,
+  getUserStats,
+  updateUserPhone, 
+  updateStatus,
   // User Controllers
   UpdateRatingClient,
   UpdateRatingVehicle,

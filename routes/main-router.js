@@ -4,6 +4,7 @@ const router = express.Router();
 
 // ─── MIDDLEWARES ───────────────────────────────────────────
 const authenticateToken = require("../middlewares/authenticateToken");
+const isAdmin = require("../middlewares/isAdmin");
 const validateRequest   = require("../middlewares/validator-middleware");
 const upload            = require("../middlewares/upload-middleware");
 
@@ -34,6 +35,13 @@ const {
 const {
   getBasicUserInfo,
   getBasicTruckInfo,
+
+  getAllClients,
+  getAllTrucker,
+  getUserStats,
+  updateUserPhone, 
+  updateStatus,
+
   UpdateRatingClient,
   UpdateRatingVehicle,
   UpdateLocationVehicle,
@@ -65,6 +73,7 @@ const {
 
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,
+  getAllRideRequest,
 
   // Offers related
   getOffersForRideRequest,
@@ -75,6 +84,8 @@ const {
   getHistoryTruck,
   getTrackingInfoByUser,
 } = require("../controllers/ride-request");
+
+const finance = require("../controllers/finance");
 
 const {
   sendMessage,
@@ -128,6 +139,8 @@ router.get(
   authenticateToken,
   getAppliedRide_postedRequests
 );
+router.get('/ride-requests/getAll', getAllRideRequest);
+
 router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 
 // ─── GET Driver Tracking FOR TRUCK ─────────────────────────
@@ -169,6 +182,12 @@ router.get( "/truck",                  authenticateToken, getBasicTruckInfo);
 router.post("/client/update-rating",   authenticateToken, UpdateRatingClient);
 router.post("/vehicle/update-rating",  authenticateToken, UpdateRatingVehicle);
 router.post("/vehicle/update-location",authenticateToken, UpdateLocationVehicle);
+
+router.get("/user_profiles/AllClient", authenticateToken, isAdmin, getAllClients);
+router.get("/user_profiles/AllTrucker", authenticateToken, isAdmin, getAllTrucker);
+router.get('/user_profiles/stats', authenticateToken, isAdmin, getUserStats);
+router.put('/update-phone/:userId', authenticateToken, isAdmin, updateUserPhone);
+router.patch('/block/:userId', authenticateToken, isAdmin, updateStatus);
 
 // ─── CLIENT PROFILE ROUTES ────────────────────────────────
 router.get(
@@ -245,5 +264,20 @@ router.get(   "/messages",             authenticateToken, getChat);
 router.post(  "/message/send",  authenticateToken, sendMessage);
 router.patch( "/message/read/:id",     authenticateToken, markMessageRead);
 router.patch( "/message/delete/:id",   authenticateToken, deleteMessage);
+
+// ─── Financial ROUTES ────────────────────────────────────
+// User Routes
+router.post("/wallet/credit", authenticateToken, finance.creditWallet);
+router.post("/wallet/debit", authenticateToken, finance.debitWallet);
+router.get("/wallet/balance", authenticateToken, finance.getWalletBalance);
+router.get("/wallet/transactions", authenticateToken, finance.getTransactionLog);
+
+// Admin Routes
+// ✅ Admin-only: Update Transaction Status
+router.patch("/transaction/:transactionId/status", authenticateToken, isAdmin, finance.updateTransactionStatus);
+// ✅ Admin-only: View All Wallets
+router.get("/admin/wallets", authenticateToken, isAdmin, finance.getAllWallets);
+// ✅ Admin-only: View All Transactions
+router.get("/admin/transactions", authenticateToken, isAdmin, finance.getAllTransactions);
 
 module.exports = router;

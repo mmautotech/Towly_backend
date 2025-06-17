@@ -23,15 +23,13 @@ const user_schema = new mongoose.Schema(
       trim: true,
       match: [/^\+44\d{10}$/, "Invalid phone format. Use: +44XXXXXXXXXX"],
     },
-
-     email: {
+    email: {
       type: String,
       required: [true, "Email is required"],
        unique: true,
       trim: true,
    
     },
-
     password: {
       type: String,
       required: true,
@@ -53,7 +51,6 @@ const user_schema = new mongoose.Schema(
       type: clientProfileSchema,
       default: undefined,
     },
-
     truck_profile: {
       driver_profile: {
         type: driverProfileSchema,
