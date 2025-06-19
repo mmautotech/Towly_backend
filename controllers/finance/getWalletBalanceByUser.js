@@ -10,7 +10,7 @@
  */
 const { Wallet } = require("../../models/finance");
 
-module.exports = async function getWalletBalance(req, res) {
+module.exports = async function getWalletBalanceByUser(req, res) {
   try {
     const wallet = await Wallet.findOne({ user_id: req.user.id });
     if (!wallet) return res.status(404).json({ error: "Wallet not found" });

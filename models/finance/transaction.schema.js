@@ -25,17 +25,17 @@ const transactionSchema = new mongoose.Schema(
       min: 0.01,
     },
     proof_details: {
-      type: String,
+      type: String, // e.g., file URL, image, or description
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled", "failed"],
+      enum: ["pending", "confirmed", "cancelled"],
       default: "pending",
     },
     remarks: {
       type: String,
     },
-    log: [logEntrySchema],
+    log: [logEntrySchema], // 📝 Admin logs, incl. cancellation reason in note
   },
   {
     timestamps: true,
@@ -43,4 +43,5 @@ const transactionSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.models.Transaction || mongoose.model("Transaction", transactionSchema);
+module.exports =
+  mongoose.models.Transaction || mongoose.model("Transaction", transactionSchema);

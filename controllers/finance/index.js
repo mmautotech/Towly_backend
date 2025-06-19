@@ -1,9 +1,14 @@
 module.exports = {
-  creditWallet: require("./creditWallet"),
+  // Client Api
   debitWallet: require("./debitWallet"),
-  getWalletBalance: require("./getWalletBalance"),
-  getTransactionLog: require("./getTransactionLog"),
+
+  // Truck Apis
+  creditWallet: require("./creditWallet"),
+  getWalletBalanceByUser: require("./getWalletBalanceByUser"),
+  getTransactionByUser: require("./getTransactionByUser"),
+
+  // Admin Apis
+  getWallets: require("./getWallets"),
+  getTransactions: require("./getTransactions"),
   updateTransactionStatus: require("./updateTransactionStatus"),
-  getAllWallets: require("./getAllWallets"),
-  getAllTransactions: require("./getAllTransactions"),
 };

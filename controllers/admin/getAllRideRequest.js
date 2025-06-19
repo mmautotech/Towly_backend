@@ -1,12 +1,23 @@
-const RideRequest = require('../../models/ride-request');
-const User = require('../../models/user');
+const { RideRequest , User } = require('../../models');
 
+/**
+ * @swagger
+ * /ride-requests/getAll:
+ *   get:
+ *     summary: Get all ride requests with user and truck info (Admin only)
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Ride requests retrieved successfully
+ *       500:
+ *         description: Server error
+ */
 const getAllRideRequest = async (req, res) => {
   try {
-    // 1. Total count of ride-requests
     const total = await RideRequest.countDocuments();
-
-    // 2. Fetch all ride-requests with populated user and offer trucker info
     const rideRequests = await RideRequest
       .find({})
       .sort({ createdAt: -1 })

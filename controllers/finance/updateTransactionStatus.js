@@ -4,27 +4,42 @@
  *   patch:
  *     summary: Admin updates transaction status
  *     tags: [Finance]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: transactionId
  *         required: true
  *         schema:
  *           type: string
+ *         description: Transaction ID to update
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - status
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [confirmed, cancelled, failed]
+ *                 enum: [confirmed, cancelled]
+ *                 description: New status to assign
  *               note:
  *                 type: string
+ *                 description: Optional reason or detail for action
  *     responses:
  *       200:
- *         description: Transaction updated
+ *         description: Transaction updated successfully
+ *       400:
+ *         description: Transaction already processed or bad request
+ *       404:
+ *         description: Transaction not found
+ *       500:
+ *         description: Server error while updating transaction
  */
+
 const mongoose = require("mongoose");
 const { Wallet, Transaction } = require("../../models/finance");
 
@@ -32,14 +47,28 @@ module.exports = async function updateTransactionStatus(req, res) {
   const session = await mongoose.startSession();
   try {
     const { status, note } = req.body;
-    const transaction = await Transaction.findById(req.params.transactionId).session(session);
+    const { transactionId } = req.params;
+
+    // Validate status
+    if (!["confirmed", "cancelled"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status. Use 'confirmed' or 'cancelled'." });
+    }
+
+    // Fetch transaction
+    const transaction = await Transaction.findById(transactionId).session(session);
     if (!transaction) return res.status(404).json({ error: "Transaction not found" });
 
+    // Prevent double processing
+    if (transaction.status !== "pending") {
+      return res.status(400).json({ error: "Transaction is already processed." });
+    }
+
     const wallet = await Wallet.findById(transaction.wallet_id).session(session);
+    if (!wallet) return res.status(404).json({ error: "Associated wallet not found" });
 
     session.startTransaction();
 
-    if (transaction.status === "pending" && status === "confirmed") {
+    if (status === "confirmed") {
       if (transaction.type === "credit") {
         wallet.balance += transaction.amount;
       } else if (transaction.type === "debit") {
@@ -53,21 +82,27 @@ module.exports = async function updateTransactionStatus(req, res) {
       await wallet.save({ session });
     }
 
+    // Update transaction
     transaction.status = status;
     transaction.log.push({
       action: status,
       by: req.user.id,
-      note: note || `Marked as ${status}`,
+      note: note || (status === "cancelled" ? "Transaction cancelled" : "Transaction confirmed"),
     });
-    await transaction.save({ session });
 
+    await transaction.save({ session });
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(200).json(transaction);
+    return res.status(200).json({
+      success: true,
+      message: `Transaction ${status}`,
+      transaction,
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    console.error("❌ Transaction update error:", err);
     return res.status(500).json({ error: "Failed to update transaction" });
   }
 };

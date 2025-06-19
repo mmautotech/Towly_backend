@@ -4,12 +4,16 @@
  *   post:
  *     summary: Submit a credit transaction
  *     tags: [Finance]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - amount
  *             properties:
  *               amount:
  *                 type: number
@@ -20,7 +24,12 @@
  *     responses:
  *       201:
  *         description: Transaction submitted
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Wallet credit failed
  */
+
 const mongoose = require("mongoose");
 const { Wallet, Transaction } = require("../../models/finance");
 
@@ -49,8 +58,8 @@ module.exports = async function creditWallet(req, res) {
         wallet_id: wallet._id,
         type: "credit",
         amount,
-        proof_details,
-        remarks,
+        proof_details: proof_details || null,
+        remarks: remarks || null,
         log: [{
           action: "created",
           by: userId,
@@ -69,10 +78,14 @@ module.exports = async function creditWallet(req, res) {
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(201).json({ message: "Transaction submitted", transaction: transaction[0] });
+    return res.status(201).json({
+      message: "Transaction submitted",
+      transaction: transaction[0],
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    console.error("❌ Wallet credit failed:", err);
     return res.status(500).json({ error: "Wallet credit failed" });
   }
 };

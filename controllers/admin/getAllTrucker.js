@@ -1,31 +1,28 @@
-const User = require('../../models/user');
+const { User } = require('../../models');
 
-// -------------------------------
-// Convert binary to Base64 string
-// -------------------------------
-const formatBase64Image = (data) => {
-  if (!data) return '';
-  return `base64,${data.toString('base64')}`;
-};
+/**
+ * @swagger
+ * /user_profiles/AllTrucker:
+ *   get:
+ *     summary: Get all trucker users (Admin only)
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all trucker users
+ *       500:
+ *         description: Server error
+ */
+const formatBase64Image = (data) => data ? `base64,${data.toString('base64')}` : '';
 
-// -------------------------------
-// Handle compressed or original photo
-// -------------------------------
 const formatPhoto = (photoObj) => {
   if (!photoObj) return '';
-
-  // Prefer compressed > original
-  if (photoObj.original?.data) {
-    return formatBase64Image(photoObj.original.data);
-  }
-
-
-
-  return '';
+  return photoObj.original?.data ? formatBase64Image(photoObj.original.data) : '';
 };
 
-
-    const formatUsersWithProfiles = (users) => {
+const formatUsersWithProfiles = (users) => {
   return users.map((user) => {
     const baseInfo = {
       _id: user._id,
@@ -38,9 +35,7 @@ const formatPhoto = (photoObj) => {
       updatedAt: user.updatedAt,
     };
 
-
-
-if (user.role === 'truck') {
+    if (user.role === 'truck') {
       const truck = user.truck_profile || {};
       const vehicle = truck.vehicle_profile || {};
       const driver = truck.driver_profile || {};
@@ -48,7 +43,7 @@ if (user.role === 'truck') {
 
       return {
         ...baseInfo,
-        profile_photo_truck: formatPhoto(vehicle.vehicle_photo), // Top-level trucker profile photo
+        profile_photo_truck: formatPhoto(vehicle.vehicle_photo),
         truck_profile: {
           rating: vehicle.rating || 0,
           ratings_count: vehicle.ratings_count || 0,
@@ -93,10 +88,6 @@ const projection = {
   status: 1,
   createdAt: 1,
   updatedAt: 1,
-
-
-  
-  // Truck profile
   'truck_profile.geo_location': 1,
   'truck_profile.vehicle_profile.registration_number': 1,
   'truck_profile.vehicle_profile.make': 1,
@@ -105,7 +96,6 @@ const projection = {
   'truck_profile.vehicle_profile.rating': 1,
   'truck_profile.vehicle_profile.ratings_count': 1,
   'truck_profile.vehicle_profile.vehicle_photo.original.data': 1,
-
   'truck_profile.driver_profile.first_name': 1,
   'truck_profile.driver_profile.last_name': 1,
   'truck_profile.driver_profile.date_of_birth': 1,
@@ -114,21 +104,12 @@ const projection = {
   'truck_profile.driver_profile.license_front.original.data': 1,
   'truck_profile.driver_profile.license_back.original.data': 1,
   'truck_profile.driver_profile.license_selfie.original.data': 1,
-
   'settings.truck_settings': 1,
 };
 
-
-
-
-
 const getAllTrucker = async (req, res) => {
   try {
-    const users = await User.find(
-      { role: { $in: ['truck'] } },
-      projection
-    ).lean();
-
+    const users = await User.find({ role: 'truck' }, projection).lean();
     res.status(200).json(formatUsersWithProfiles(users));
   } catch (err) {
     console.error('Fetch error:', err.message);
@@ -136,12 +117,4 @@ const getAllTrucker = async (req, res) => {
   }
 };
 
-// -------------------------------
-// GET /api/users/search?q=...
-// -------------------------------
-
-
-module.exports = {
-  getAllTrucker
- 
-};
+module.exports = getAllTrucker;

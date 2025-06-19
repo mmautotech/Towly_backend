@@ -12,7 +12,6 @@ const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
 const getHistoryClient = require("./getHistoryClient");
 const getHistoryTruck = require("./getHistoryTruck");
 const getTrackingInfoByUser = require("./getTrackingInfoByUser");
-const getAllRideRequest = require("./getAllRideRequest");
 
 // Offers related
 const getOffersForRideRequest = require("./getOffersForRideRequest");
@@ -31,7 +30,6 @@ module.exports = {
 
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,
-  getAllRideRequest,
 
   // Offers related
   getOffersForRideRequest,

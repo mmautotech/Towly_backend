@@ -1,32 +1,27 @@
-const User = require('../../models/user');
+const { User } = require('../../models');
 
-// -------------------------------
-// Convert binary to Base64 string
-// -------------------------------
-const formatBase64Image = (data) => {
-  if (!data) return '';
-  return `base64,${data.toString('base64')}`;
-};
+/**
+ * @swagger
+ * /user_profiles/AllClient:
+ *   get:
+ *     summary: Get all client users (Admin only)
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all client users
+ *       500:
+ *         description: Server error
+ */
+const formatBase64Image = (data) => data ? `base64,${data.toString('base64')}` : '';
 
-// -------------------------------
-// Handle compressed or original photo
-// -------------------------------
 const formatPhoto = (photoObj) => {
   if (!photoObj) return '';
-
-  // Prefer compressed > original
-  if (photoObj.original?.data) {
-    return formatBase64Image(photoObj.original.data);
-  }
-
-
-
-  return '';
+  return photoObj.original?.data ? formatBase64Image(photoObj.original.data) : '';
 };
 
-// -------------------------------
-// Main formatter for user profiles
-// -------------------------------
 const formatUsersWithProfiles = (users) => {
   return users.map((user) => {
     const baseInfo = {
@@ -43,7 +38,6 @@ const formatUsersWithProfiles = (users) => {
     if (user.role === 'client') {
       const profile = user.client_profile || {};
       const settings = user.settings?.client_settings || {};
-
       return {
         ...baseInfo,
         profile_photo: formatPhoto(profile.profile_photo),
@@ -66,9 +60,6 @@ const formatUsersWithProfiles = (users) => {
   });
 };
 
-// -------------------------------
-// MongoDB projection
-// -------------------------------
 const projection = {
   user_name: 1,
   email: 1,
@@ -77,31 +68,18 @@ const projection = {
   status: 1,
   createdAt: 1,
   updatedAt: 1,
-
-  // Client profile
   'client_profile.first_name': 1,
   'client_profile.last_name': 1,
   'client_profile.rating': 1,
   'client_profile.ratings_count': 1,
   'client_profile.address': 1,
-
   'client_profile.profile_photo.original.data': 1,
-
   'settings.client_settings': 1,
-
-
 };
 
-// -------------------------------
-// GET /api/users
-// -------------------------------
 const getAllClients = async (req, res) => {
   try {
-    const users = await User.find(
-      { role: { $in: ['client'] } },
-      projection
-    ).lean();
-
+    const users = await User.find({ role: 'client' }, projection).lean();
     res.status(200).json(formatUsersWithProfiles(users));
   } catch (err) {
     console.error('Fetch error:', err.message);
@@ -109,12 +87,4 @@ const getAllClients = async (req, res) => {
   }
 };
 
-// -------------------------------
-// GET /api/users/search?q=...
-// -------------------------------
-
-
-module.exports = {
-  getAllClients
- 
-};
+module.exports = getAllClients;

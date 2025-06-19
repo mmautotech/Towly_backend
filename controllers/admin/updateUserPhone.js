@@ -1,5 +1,40 @@
 const { User } = require('../../models');
 
+/**
+ * @swagger
+ * /update-phone/{userId}:
+ *   put:
+ *     summary: Update user's phone number
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Phone number updated successfully
+ *       400:
+ *         description: Phone already in use or invalid
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
 const updateUserPhone = async (req, res) => {
   const { userId } = req.params;
   const { phone } = req.body;
@@ -9,7 +44,6 @@ const updateUserPhone = async (req, res) => {
   }
 
   try {
-    // Check if phone already exists for another user
     const existingUser = await User.findOne({ phone, _id: { $ne: userId } });
     if (existingUser) {
       return res.status(400).json({ message: 'Phone number already exists for another user' });

@@ -1,0 +1,119 @@
+/**
+ * @swagger
+ * /admin/transactions:
+ *   get:
+ *     summary: Admin gets all or filtered transactions
+ *     tags: [Finance]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: user_id
+ *         schema:
+ *           type: string
+ *         description: Optional user ID to filter transactions
+ *     responses:
+ *       200:
+ *         description: All or filtered transaction records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                         enum: [credit, debit]
+ *                       amount:
+ *                         type: number
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, confirmed, cancelled]
+ *                       remarks:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       user_id:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           user_name:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           phone:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ *                       wallet_id:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           balance:
+ *                             type: number
+ *                           currency:
+ *                             type: string
+ *       400:
+ *         description: Invalid user_id
+ *       500:
+ *         description: Server error
+ */
+
+const mongoose = require("mongoose");
+const Transaction = require("../../models/finance/transaction.schema");
+
+module.exports = async function getTransactions(req, res) {
+  try {
+    const { user_id } = req.query;
+
+    // Validate user_id if provided
+    const filter = {};
+    if (user_id) {
+      if (!mongoose.Types.ObjectId.isValid(user_id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid user_id format",
+        });
+      }
+      filter.user_id = user_id;
+    }
+
+    // Fetch transactions with user and wallet info, sort by latest first
+    const transactions = await Transaction.find(filter)
+      .populate({
+        path: "user_id",
+        select: "user_name email phone role",
+      })
+      .populate({
+        path: "wallet_id",
+        select: "balance currency",
+      })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: transactions.length,
+      transactions,
+    });
+  } catch (err) {
+    console.error("Transaction fetch error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch transactions",
+    });
+  }
+};
