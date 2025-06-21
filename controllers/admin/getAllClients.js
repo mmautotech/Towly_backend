@@ -1,22 +1,5 @@
 const { User } = require('../../models');
 
-/**
- * @swagger
- * /user_profiles/AllClient:
- *   get:
- *     summary: Get all client users (Admin only)
- *     tags:
- *       - Admin
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of all client users
- *       403:
- *         description: Forbidden, only admin can access
- *       500:
- *         description: Server error
- */
 const formatBase64Image = (data) => data ? `base64,${data.toString('base64')}` : '';
 
 const formatPhoto = (photoObj) => {
@@ -84,21 +67,15 @@ const getAllClients = async (req, res) => {
     // Defensive: Confirm current user is admin
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
-        success: false,
         message: 'Forbidden: Admins only.',
       });
     }
 
     const users = await User.find({ role: 'client' }, projection).lean();
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      clients: formatUsersWithProfiles(users),
-    });
+    res.status(200).json(formatUsersWithProfiles(users));
   } catch (err) {
     console.error('Fetch error:', err.message);
     res.status(500).json({
-      success: false,
       message: 'Internal Server Error',
     });
   }

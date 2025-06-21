@@ -18,58 +18,6 @@ const Transaction = require("../../models/finance/transaction.schema");
  *     responses:
  *       200:
  *         description: All or filtered transaction records
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 count:
- *                   type: integer
- *                 transactions:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                       type:
- *                         type: string
- *                         enum: [credit, debit]
- *                       amount:
- *                         type: number
- *                       status:
- *                         type: string
- *                         enum: [pending, confirmed, cancelled]
- *                       remarks:
- *                         type: string
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *                       user_id:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                           user_name:
- *                             type: string
- *                           email:
- *                             type: string
- *                           phone:
- *                             type: string
- *                           role:
- *                             type: string
- *                       wallet_id:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                           balance:
- *                             type: number
- *                           currency:
- *                             type: string
  *       400:
  *         description: Invalid user_id
  *       403:
@@ -83,7 +31,6 @@ module.exports = async function getTransactions(req, res) {
     // Defensive: Confirm current user is admin
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
-        success: false,
         message: "Forbidden: Admins only.",
       });
     }
@@ -95,7 +42,6 @@ module.exports = async function getTransactions(req, res) {
     if (user_id) {
       if (!mongoose.Types.ObjectId.isValid(user_id)) {
         return res.status(400).json({
-          success: false,
           message: "Invalid user_id format",
         });
       }
@@ -114,15 +60,10 @@ module.exports = async function getTransactions(req, res) {
       })
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      count: transactions.length,
-      transactions,
-    });
+    return res.status(200).json(transactions);
   } catch (err) {
     console.error("Transaction fetch error:", err);
     return res.status(500).json({
-      success: false,
       message: "Failed to fetch transactions",
     });
   }

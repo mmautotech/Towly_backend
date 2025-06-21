@@ -18,47 +18,6 @@ const Wallet = require("../../models/finance/wallet.schema");
  *     responses:
  *       200:
  *         description: Wallet(s) retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 count:
- *                   type: integer
- *                 wallets:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                       balance:
- *                         type: number
- *                       currency:
- *                         type: string
- *                       user_id:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                           user_name:
- *                             type: string
- *                           email:
- *                             type: string
- *                           phone:
- *                             type: string
- *                           role:
- *                             type: string
- *                       last_transaction:
- *                         type: string
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *                       updatedAt:
- *                         type: string
- *                         format: date-time
  *       400:
  *         description: Invalid user_id
  *       403:
@@ -72,7 +31,6 @@ module.exports = async function getWallets(req, res) {
     // Defensive: Confirm current user is admin
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
-        success: false,
         message: "Forbidden: Admins only.",
       });
     }
@@ -84,7 +42,6 @@ module.exports = async function getWallets(req, res) {
     if (user_id) {
       if (!mongoose.Types.ObjectId.isValid(user_id)) {
         return res.status(400).json({
-          success: false,
           message: "Invalid user_id format",
         });
       }
@@ -96,15 +53,10 @@ module.exports = async function getWallets(req, res) {
       .populate("user_id", "user_name email phone role")
       .sort({ updatedAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      count: wallets.length,
-      wallets,
-    });
+    return res.status(200).json(wallets);
   } catch (err) {
     console.error("Error fetching wallets:", err);
     return res.status(500).json({
-      success: false,
       message: "Failed to fetch wallets"
     });
   }

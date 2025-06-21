@@ -114,21 +114,15 @@ const getAllTrucker = async (req, res) => {
     // Explicit check: Only admins can access
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
-        success: false,
         message: 'Forbidden: Admins only.',
       });
     }
 
     const users = await User.find({ role: 'truck' }, projection).lean();
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      truckers: formatUsersWithProfiles(users),
-    });
+    res.status(200).json(formatUsersWithProfiles(users));
   } catch (err) {
     console.error('Fetch error:', err.message);
     res.status(500).json({
-      success: false,
       message: 'Internal Server Error',
     });
   }
