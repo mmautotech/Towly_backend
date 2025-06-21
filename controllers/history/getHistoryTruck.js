@@ -58,8 +58,16 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const getHistoryTruck = async (req, res, next) => {
   try {
-    // truck_id from JWT
     const truck_id = req.user.id;
+    const role = req.user.role;
+
+    // 🔐 Role restriction: only allow truck users
+    if (role !== "truck") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only truck users can access this resource.",
+      });
+    }
 
     const rideRequests = await RideRequest.find({
       offers: {
@@ -67,7 +75,7 @@ const getHistoryTruck = async (req, res, next) => {
       },
     })
       .populate("user_id", "user_name")
-      .lean();
+      .sort({ updatedAt: -1 }).lean();
 
     const formatted = rideRequests.map((r) => {
       const offerByTruck = r.offers.find(

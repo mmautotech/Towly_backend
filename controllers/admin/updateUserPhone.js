@@ -30,28 +30,47 @@ const { User } = require('../../models');
  *         description: Phone number updated successfully
  *       400:
  *         description: Phone already in use or invalid
+ *       403:
+ *         description: Forbidden, only admin can access
  *       404:
  *         description: User not found
  *       500:
  *         description: Server error
  */
 const updateUserPhone = async (req, res) => {
+  // Defensive: Confirm current user is admin
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: Admins only.',
+    });
+  }
+
   const { userId } = req.params;
   const { phone } = req.body;
 
   if (!phone) {
-    return res.status(400).json({ message: 'Phone number is required' });
+    return res.status(400).json({
+      success: false,
+      message: 'Phone number is required'
+    });
   }
 
   try {
     const existingUser = await User.findOne({ phone, _id: { $ne: userId } });
     if (existingUser) {
-      return res.status(400).json({ message: 'Phone number already exists for another user' });
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already exists for another user'
+      });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
     user.phone = phone;
@@ -67,7 +86,10 @@ const updateUserPhone = async (req, res) => {
     });
   } catch (error) {
     console.error('Admin Phone Update Error:', error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 

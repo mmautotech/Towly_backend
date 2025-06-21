@@ -12,6 +12,8 @@ const { User } = require('../../models');
  *     responses:
  *       200:
  *         description: List of all client users
+ *       403:
+ *         description: Forbidden, only admin can access
  *       500:
  *         description: Server error
  */
@@ -79,11 +81,26 @@ const projection = {
 
 const getAllClients = async (req, res) => {
   try {
+    // Defensive: Confirm current user is admin
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Admins only.',
+      });
+    }
+
     const users = await User.find({ role: 'client' }, projection).lean();
-    res.status(200).json(formatUsersWithProfiles(users));
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      clients: formatUsersWithProfiles(users),
+    });
   } catch (err) {
     console.error('Fetch error:', err.message);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+    });
   }
 };
 

@@ -1,3 +1,6 @@
+const mongoose = require("mongoose");
+const { Wallet, Transaction } = require("../../models/finance");
+
 /**
  * @swagger
  * /transaction/{transactionId}/status:
@@ -34,37 +37,60 @@
  *         description: Transaction updated successfully
  *       400:
  *         description: Transaction already processed or bad request
+ *       403:
+ *         description: Forbidden, only admin can access
  *       404:
  *         description: Transaction not found
  *       500:
  *         description: Server error while updating transaction
  */
 
-const mongoose = require("mongoose");
-const { Wallet, Transaction } = require("../../models/finance");
-
 module.exports = async function updateTransactionStatus(req, res) {
   const session = await mongoose.startSession();
   try {
+    // Admin check for defense-in-depth
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Admins only.",
+      });
+    }
+
     const { status, note } = req.body;
     const { transactionId } = req.params;
 
     // Validate status
     if (!["confirmed", "cancelled"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status. Use 'confirmed' or 'cancelled'." });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Use 'confirmed' or 'cancelled'."
+      });
     }
 
     // Fetch transaction
     const transaction = await Transaction.findById(transactionId).session(session);
-    if (!transaction) return res.status(404).json({ error: "Transaction not found" });
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Transaction not found"
+      });
+    }
 
     // Prevent double processing
     if (transaction.status !== "pending") {
-      return res.status(400).json({ error: "Transaction is already processed." });
+      return res.status(400).json({
+        success: false,
+        message: "Transaction is already processed."
+      });
     }
 
     const wallet = await Wallet.findById(transaction.wallet_id).session(session);
-    if (!wallet) return res.status(404).json({ error: "Associated wallet not found" });
+    if (!wallet) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated wallet not found"
+      });
+    }
 
     session.startTransaction();
 
@@ -74,7 +100,10 @@ module.exports = async function updateTransactionStatus(req, res) {
       } else if (transaction.type === "debit") {
         if (wallet.balance < transaction.amount) {
           await session.abortTransaction();
-          return res.status(400).json({ error: "Insufficient funds" });
+          return res.status(400).json({
+            success: false,
+            message: "Insufficient funds"
+          });
         }
         wallet.balance -= transaction.amount;
       }
@@ -103,6 +132,9 @@ module.exports = async function updateTransactionStatus(req, res) {
     await session.abortTransaction();
     session.endSession();
     console.error("❌ Transaction update error:", err);
-    return res.status(500).json({ error: "Failed to update transaction" });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update transaction"
+    });
   }
 };

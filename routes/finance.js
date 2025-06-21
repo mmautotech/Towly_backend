@@ -1,18 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const authenticateToken = require("../middlewares/authenticateToken");
-const isAdmin = require("../middlewares/isAdmin");
+const isTruck = require("../middlewares/isTruck");
+const isClient = require("../middlewares/isClient");
 const finance = require("../controllers/finance");
 
-// Truck Routes
-router.post("/wallet/credit", authenticateToken, finance.creditWallet);
-router.post("/wallet/debit", authenticateToken, finance.debitWallet);
-router.get("/wallet/balance", authenticateToken, finance.getWalletBalanceByUser);
-router.get("/wallet/transactions", authenticateToken, finance.getTransactionByUser);
+// Only CLIENTS can debit their wallet
+router.post("/debit", authenticateToken, isClient, finance.debitWallet);
 
-// Admin Routes
-router.patch("/transaction/:transactionId/status", authenticateToken, isAdmin, finance.updateTransactionStatus);
-router.get("/admin/wallets", authenticateToken, isAdmin, finance.getWallets);
-router.get("/admin/transactions", authenticateToken, isAdmin, finance.getTransactions);
+// Only TRUCK users can credit/view wallet/transactions
+router.post("/credit", authenticateToken, isTruck, finance.creditWallet);
+router.get("/balance", authenticateToken, isTruck, finance.getWalletBalanceByUser);
+router.get("/transactions", authenticateToken, isTruck, finance.getTransactionByUser);
 
 module.exports = router;

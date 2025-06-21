@@ -6,8 +6,13 @@ module.exports = {
   getAllClients: require("./getAllClients"),
   getAllTrucker: require("./getAllTrucker"),
   getAllRideRequest: require("./getAllRideRequest"),
+  getWallets: require("../admin/getWallets"),
+  getTransactions: require("../admin/getTransactions"),
 
   // Update user Phone or status
   updateUserPhone: require("./updateUserPhone"),
   updateUserStatus: require("./updateUserStatus"),
+  updateTransactionStatus: require("../admin/updateTransactionStatus"),
+
+
 };

@@ -83,13 +83,21 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const getHistoryClient = async (req, res, next) => {
   try {
-    // pull the client’s ID from the validated JWT
     const user_id = req.user.id;
+    const role = req.user.role;
+
+    // 🔐 Restrict access to client role
+    if (role !== "client") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only clients can access ride history.",
+      });
+    }
 
     const requests = await RideRequest.find({
       user_id: new ObjectId(user_id),
       status: { $in: ["completed", "cancelled"] },
-    }).lean();
+    }).sort({ updatedAt: -1 }).lean();
 
     const formatted = await Promise.all(
       requests.map(async (r) => {

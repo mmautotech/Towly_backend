@@ -2,11 +2,12 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const clientProfileSchema  = require("./clientProfile.schema");
-const driverProfileSchema  = require("./driverProfile.schema");
+const clientProfileSchema = require("./clientProfile.schema");
+const driverProfileSchema = require("./driverProfile.schema");
 const vehicleProfileSchema = require("./vehicleProfile.schema");
-const settingSchema        = require("./setting.schema");
+const settingSchema = require("./setting.schema");
 
+// 🚀 Final user schema with role-specific fields
 const user_schema = new mongoose.Schema(
   {
     user_name: {
@@ -26,9 +27,8 @@ const user_schema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-       unique: true,
+      unique: true,
       trim: true,
-   
     },
     password: {
       type: String,
@@ -43,10 +43,11 @@ const user_schema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "blocked"],
+      enum: ["active", "blocked", "partial"],
       default: "active",
     },
-    // Optional embedded profile with no unique constraints
+
+    // ✅ Role-specific profiles
     client_profile: {
       type: clientProfileSchema,
       default: undefined,
@@ -62,9 +63,10 @@ const user_schema = new mongoose.Schema(
       },
     },
 
+    // ✅ Shared settings for all roles
     settings: {
-      client_settings: { type: settingSchema, default: undefined },
-      truck_settings:  { type: settingSchema, default: undefined },
+      type: settingSchema,
+      default: undefined,
     },
   },
   {
@@ -73,19 +75,29 @@ const user_schema = new mongoose.Schema(
   }
 );
 
-// ✅ Hash password before save
+// ✅ Hash password before saving
 user_schema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// ✅ Compare password method
+// ✅ Enforce exclusive role-specific profiles
+user_schema.pre("save", function (next) {
+  if (this.role === "client") {
+    this.truck_profile = undefined;
+  } else if (this.role === "truck") {
+    this.client_profile = undefined;
+  }
+  next();
+});
+
+// ✅ Password comparison
 user_schema.methods.comparePassword = function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
-// ✅ JWT generation method
+// ✅ JWT generation
 user_schema.methods.generateToken = function () {
   return jwt.sign(
     {

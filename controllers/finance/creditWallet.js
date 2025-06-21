@@ -1,8 +1,11 @@
+const mongoose = require("mongoose");
+const { Wallet, Transaction } = require("../../models/finance");
+
 /**
  * @swagger
  * /wallet/credit:
  *   post:
- *     summary: Submit a credit transaction
+ *     summary: Submit a credit transaction (truck only)
  *     tags: [Finance]
  *     security:
  *       - bearerAuth: []
@@ -17,21 +20,50 @@
  *             properties:
  *               amount:
  *                 type: number
+ *                 example: 200
  *               proof_details:
  *                 type: string
+ *                 example: "Bank Transfer #12345"
  *               remarks:
  *                 type: string
+ *                 example: "Weekly top-up"
  *     responses:
  *       201:
  *         description: Transaction submitted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 transaction:
+ *                   type: object
  *       400:
- *         description: Invalid input
+ *         description: Invalid amount or input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       500:
  *         description: Wallet credit failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  */
-
-const mongoose = require("mongoose");
-const { Wallet, Transaction } = require("../../models/finance");
 
 async function getOrCreateWallet(userId) {
   let wallet = await Wallet.findOne({ user_id: userId });
@@ -46,7 +78,10 @@ module.exports = async function creditWallet(req, res) {
     const userId = req.user.id;
 
     if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: "Invalid amount" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount"
+      });
     }
 
     session.startTransaction();
@@ -79,6 +114,7 @@ module.exports = async function creditWallet(req, res) {
     session.endSession();
 
     return res.status(201).json({
+      success: true,
       message: "Transaction submitted",
       transaction: transaction[0],
     });
@@ -86,6 +122,9 @@ module.exports = async function creditWallet(req, res) {
     await session.abortTransaction();
     session.endSession();
     console.error("❌ Wallet credit failed:", err);
-    return res.status(500).json({ error: "Wallet credit failed" });
+    return res.status(500).json({
+      success: false,
+      message: "Wallet credit failed"
+    });
   }
 };

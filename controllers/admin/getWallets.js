@@ -1,8 +1,11 @@
+const mongoose = require("mongoose");
+const Wallet = require("../../models/finance/wallet.schema");
+
 /**
  * @swagger
- * /admin/transactions:
+ * /admin/wallets:
  *   get:
- *     summary: Admin gets all or filtered transactions
+ *     summary: Admin gets all wallets or a specific wallet using user_id
  *     tags: [Finance]
  *     security:
  *       - bearerAuth: []
@@ -11,10 +14,10 @@
  *         name: user_id
  *         schema:
  *           type: string
- *         description: Optional user ID to filter transactions
+ *         description: Optional user ID to get wallet for specific user
  *     responses:
  *       200:
- *         description: All or filtered transaction records
+ *         description: Wallet(s) retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -22,29 +25,19 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 count:
  *                   type: integer
- *                 transactions:
+ *                 wallets:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
  *                       _id:
  *                         type: string
- *                       type:
- *                         type: string
- *                         enum: [credit, debit]
- *                       amount:
+ *                       balance:
  *                         type: number
- *                       status:
+ *                       currency:
  *                         type: string
- *                         enum: [pending, confirmed, cancelled]
- *                       remarks:
- *                         type: string
- *                       createdAt:
- *                         type: string
- *                         format: date-time
  *                       user_id:
  *                         type: object
  *                         properties:
@@ -58,29 +51,35 @@
  *                             type: string
  *                           role:
  *                             type: string
- *                       wallet_id:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                           balance:
- *                             type: number
- *                           currency:
- *                             type: string
+ *                       last_transaction:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
  *       400:
  *         description: Invalid user_id
+ *       403:
+ *         description: Forbidden, only admin can access
  *       500:
  *         description: Server error
  */
 
-const mongoose = require("mongoose");
-const Transaction = require("../../models/finance/transaction.schema");
-
-module.exports = async function getTransactions(req, res) {
+module.exports = async function getWallets(req, res) {
   try {
+    // Defensive: Confirm current user is admin
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Admins only.",
+      });
+    }
+
     const { user_id } = req.query;
 
-    // Validate user_id if provided
+    // Build query filter
     const filter = {};
     if (user_id) {
       if (!mongoose.Types.ObjectId.isValid(user_id)) {
@@ -92,28 +91,21 @@ module.exports = async function getTransactions(req, res) {
       filter.user_id = user_id;
     }
 
-    // Fetch transactions with user and wallet info, sort by latest first
-    const transactions = await Transaction.find(filter)
-      .populate({
-        path: "user_id",
-        select: "user_name email phone role",
-      })
-      .populate({
-        path: "wallet_id",
-        select: "balance currency",
-      })
-      .sort({ createdAt: -1 });
+    // Fetch wallets with most recently updated first
+    const wallets = await Wallet.find(filter)
+      .populate("user_id", "user_name email phone role")
+      .sort({ updatedAt: -1 });
 
     return res.status(200).json({
       success: true,
-      count: transactions.length,
-      transactions,
+      count: wallets.length,
+      wallets,
     });
   } catch (err) {
-    console.error("Transaction fetch error:", err);
+    console.error("Error fetching wallets:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch transactions",
+      message: "Failed to fetch wallets"
     });
   }
 };

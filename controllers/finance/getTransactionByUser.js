@@ -1,9 +1,13 @@
+const { Transaction } = require("../../models/finance");
+
 /**
  * @swagger
  * /wallet/transactions:
  *   get:
- *     summary: Get current user's transaction history with filters and pagination
+ *     summary: Get current truck user's transaction history with filters and pagination
  *     tags: [Finance]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: status
@@ -35,12 +39,58 @@
  *           default: 20
  *     responses:
  *       200:
- *         description: Filtered and paginated user transactions
+ *         description: Filtered and paginated truck user's transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                 transactions:
+ *                   type: array
+ *                 message:
+ *                   type: string
+ *       403:
+ *         description: Forbidden - only truck users allowed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Failed to fetch transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  */
-const { Transaction } = require("../../models/finance");
 
 module.exports = async function getTransactionByUser(req, res) {
   try {
+    // Ensure user is truck (in practice, use isTruck middleware in router)
+    if (!req.user || req.user.role !== "truck") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Truck users only."
+      });
+    }
+
     const userId = req.user.id;
     const {
       status,
@@ -79,9 +129,13 @@ module.exports = async function getTransactionByUser(req, res) {
       limit: parseInt(limit),
       total,
       transactions,
+      message: "Truck user's transactions fetched successfully"
     });
   } catch (err) {
     console.error("Transaction fetch error:", err);
-    return res.status(500).json({ success: false, error: "Failed to fetch transactions" });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch transactions"
+    });
   }
 };

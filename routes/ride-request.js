@@ -28,7 +28,6 @@ const {
   getDriverTrackingByClient,
   getActiveServiceByTruck,
 } = require("../controllers/ride-request");
-
 router.post("/ride-request/create", authenticateToken, validateRequest(ride_request_schema), createRideRequest);
 router.patch("/ride-request/post", authenticateToken, validateRequest(post_ride_schema), postRideRequest);
 router.patch("/ride-request/accept", authenticateToken, validateRequest(accept_ride_schema), acceptRideRequest);
@@ -41,6 +40,7 @@ router.get("/ride-requests/tracking/:user_id", getTrackingInfoByUser);
 router.get("/ride-requests/truck/tracking", authenticateToken, getDriverTrackingByClient);
 router.get("/ride-requests/active/truck", authenticateToken, getActiveServiceByTruck);
 
+// check before making an offer allow only if balance exist & status is not blocked
 router.post("/ride-request/offers", authenticateToken, validateRequest(get_offers_schema), getOffersForRideRequest);
 router.patch("/ride-request/add-offer", authenticateToken, validateRequest(add_offer_schema), addOfferToRideRequest);
 router.patch("/ride-request/counter-offer", authenticateToken, validateRequest(add_counter_offer_schema), addCounterOfferToRideRequest);

@@ -1,7 +1,6 @@
-// controllers/user/updateVehicleProfile.js
-
 const { User } = require("../../models");
 const sharp = require("sharp");
+const fs = require("fs");
 
 /**
  * @swagger
@@ -35,13 +34,23 @@ const sharp = require("sharp");
  *         description: Vehicle profile updated successfully
  *       400:
  *         description: Bad request – missing file or fields
+ *       403:
+ *         description: Forbidden – Only truck users allowed
  *       404:
  *         description: User not found
  *       500:
  *         description: Internal server error
  */
 exports.updateVehicleProfile = async (req, res) => {
-  // 1) Load user
+  // 🔐 Restrict to truck role
+  if (req.user.role !== "truck") {
+    return res.status(403).json({
+      success: false,
+      message: "Only truck users can update vehicle profile.",
+    });
+  }
+
+  // 1. Fetch User
   let user;
   try {
     user = await User.findById(req.user.id);
@@ -58,36 +67,32 @@ exports.updateVehicleProfile = async (req, res) => {
     });
   }
 
-  // 2) Ensure nested objects
+  // 2. Initialize profile structure
   user.truck_profile = user.truck_profile || {};
   user.truck_profile.vehicle_profile = user.truck_profile.vehicle_profile || {};
   const vp = user.truck_profile.vehicle_profile;
 
-  // 3) Apply text updates
-  ["registration_number", "make", "model", "color"].forEach((field) => {
-    if (req.body[field] !== undefined) {
-      vp[field] = req.body[field];
+  // 3. Update text fields
+  ["registration_number", "make", "model", "color"].forEach((f) => {
+    if (req.body[f] !== undefined) {
+      vp[f] = req.body[f];
     }
   });
 
-  // 4) Validate file presence
-  if (!req.file) {
+  // 4. Validate image file
+  const file = req.file;
+  if (!file) {
     return res.status(400).json({
       success: false,
       message: "Please attach a file under the field name 'vehiclePhoto'.",
     });
   }
 
-  // 5) Read buffer
-  let buf;
+  // 5. Read buffer
+  let buffer;
   try {
-    if (req.file.buffer) {
-      buf = req.file.buffer;
-    } else if (req.file.path) {
-      buf = fs.readFileSync(req.file.path);
-    } else {
-      throw new Error("Uploaded file missing buffer and path");
-    }
+    buffer = file.buffer || (file.path && fs.readFileSync(file.path));
+    if (!buffer) throw new Error("No valid buffer found.");
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -95,19 +100,24 @@ exports.updateVehicleProfile = async (req, res) => {
     });
   }
 
-  // 6) Store original
-  const mime = req.file.mimetype;
+  // 6. Store original
   vp.vehicle_photo = vp.vehicle_photo || {};
-  vp.vehicle_photo.original = { data: buf, contentType: mime };
+  vp.vehicle_photo.original = {
+    data: buffer,
+    contentType: file.mimetype,
+  };
 
-  // 7) Compress via Sharp
-  let compBuf;
+  // 7. Compress image
   try {
-    compBuf = await sharp(buf)
+    const compressed = await sharp(buffer)
       .resize({ width: 200 })
       .jpeg({ quality: 80 })
       .toBuffer();
-    vp.vehicle_photo.compressed = { data: compBuf, contentType: "image/jpeg" };
+
+    vp.vehicle_photo.compressed = {
+      data: compressed,
+      contentType: "image/jpeg",
+    };
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -115,7 +125,7 @@ exports.updateVehicleProfile = async (req, res) => {
     });
   }
 
-  // 8) Save
+  // 8. Save to DB
   try {
     user.markModified("truck_profile.vehicle_profile");
     await user.save();
@@ -126,7 +136,7 @@ exports.updateVehicleProfile = async (req, res) => {
     });
   }
 
-  // 9) Success
+  // ✅ Success
   return res.status(200).json({
     success: true,
     message: "Vehicle profile updated successfully.",

@@ -32,23 +32,39 @@ const { User } = require('../../models');
  *         description: User status updated successfully
  *       400:
  *         description: Invalid status
+ *       403:
+ *         description: Forbidden, only admin can access
  *       404:
  *         description: User not found
  *       500:
  *         description: Server error
  */
 const updateUserStatus = async (req, res) => {
+  // Admin check for extra security
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: Admins only.',
+    });
+  }
+
   const { userId } = req.params;
   const { status } = req.body;
 
   if (!["blocked", "active"].includes(status)) {
-    return res.status(400).json({ message: 'Invalid status. Use "blocked" or "active".' });
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid status. Use "blocked" or "active".'
+    });
   }
 
   try {
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
     user.status = status;
@@ -61,7 +77,10 @@ const updateUserStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating user status:', error);
-    return res.status(500).json({ message: "Server error while updating user status." });
+    return res.status(500).json({
+      success: false,
+      message: "Server error while updating user status."
+    });
   }
 };
 

@@ -1,5 +1,3 @@
-// controllers/user/updateDriverProfile.js
-
 const { User } = require("../../models");
 const sharp = require("sharp");
 const fs = require("fs");
@@ -20,6 +18,12 @@ const fs = require("fs");
  *           schema:
  *             type: object
  *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone_number:
+ *                 type: string
+ *                 example: "+441234567890"
  *               first_name:
  *                 type: string
  *               last_name:
@@ -46,13 +50,51 @@ const fs = require("fs");
  *         description: Driver profile updated successfully
  *       400:
  *         description: Bad request – invalid date or missing file
+ *       403:
+ *         description: Forbidden – Only truck users allowed
  *       404:
  *         description: User not found
  *       500:
  *         description: Internal server error
  */
 exports.updateDriverProfile = async (req, res) => {
-  // 1) Build the $set update object
+  // 🔐 Check role
+  if (req.user.role !== "truck") {
+    return res.status(403).json({
+      success: false,
+      message: "Only truck users can update driver profile.",
+    });
+  }
+
+  // 🚩 Require and validate email and phone_number
+  const { email, phone_number } = req.body;
+  if (!email || !phone_number) {
+    return res.status(400).json({
+      success: false,
+      message: "Both email and phone_number are required.",
+    });
+  }
+
+  // 🔎 Fetch user to compare email/phone
+  const user = await User.findById(req.user.id).select("email phone");
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found.",
+    });
+  }
+
+  if (
+    email.trim().toLowerCase() !== user.email.toLowerCase() ||
+    phone_number.trim() !== user.phone
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Provided email or phone number does not match authenticated user.",
+    });
+  }
+
   const set = {};
 
   // a) Text fields
@@ -83,7 +125,7 @@ exports.updateDriverProfile = async (req, res) => {
     }
   });
 
-  // c) File fields
+  // c) File uploads
   const filesMap = {
     license_Front: "license_front",
     license_Back: "license_back",
@@ -95,7 +137,6 @@ exports.updateDriverProfile = async (req, res) => {
     if (!arr || !arr[0]) continue;
 
     const file = arr[0];
-    // read buffer
     let buf = file.buffer;
     if (!buf && file.path) {
       try {
@@ -109,35 +150,34 @@ exports.updateDriverProfile = async (req, res) => {
     }
     if (!buf) continue;
 
-    // original
+    // Save original
     set[`truck_profile.driver_profile.${propName}.original`] = {
       data: buf,
       contentType: file.mimetype,
     };
 
-    // compressed via Sharp
-    let comp;
+    // Save compressed
     try {
-      comp = await sharp(buf)
+      const comp = await sharp(buf)
         .resize({ width: 200 })
         .jpeg({ quality: 80 })
         .toBuffer();
+
+      set[`truck_profile.driver_profile.${propName}.compressed`] = {
+        data: comp,
+        contentType: "image/jpeg",
+      };
     } catch (e) {
       return res.status(500).json({
         success: false,
         message: `Compression error on ${fieldKey}: ${e.message}`,
       });
     }
-    set[`truck_profile.driver_profile.${propName}.compressed`] = {
-      data: comp,
-      contentType: "image/jpeg",
-    };
   }
 
-  // 2) Perform the update
-  let updated;
+  // 🔄 Update in DB
   try {
-    updated = await User.findByIdAndUpdate(
+    const updated = await User.findByIdAndUpdate(
       req.user.id,
       { $set: set },
       { new: true, runValidators: true }
@@ -147,16 +187,16 @@ exports.updateDriverProfile = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found." });
     }
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Update failed: " + err.message });
-  }
 
-  // 3) Success
-  return res.status(200).json({
-    success: true,
-    message: "Driver profile updated successfully.",
-    timestamp: new Date().toISOString(),
-  });
+    return res.status(200).json({
+      success: true,
+      message: "Driver profile updated successfully.",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Update failed: " + err.message,
+    });
+  }
 };

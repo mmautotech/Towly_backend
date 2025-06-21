@@ -18,6 +18,8 @@ const { Wallet, Transaction } = require('../../models/finance');
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
  *                 totalUsers:
  *                   type: integer
  *                 totalClients:
@@ -34,11 +36,21 @@ const { Wallet, Transaction } = require('../../models/finance');
  *                   type: integer
  *                 cancelledTransactions:
  *                   type: integer
+ *       403:
+ *         description: Forbidden, only admin can access
  *       500:
  *         description: Server error
  */
 const getStats = async (req, res) => {
   try {
+    // Admin check for extra defense
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Admins only.',
+      });
+    }
+
     const [
       totalUsers,
       totalClients,
@@ -64,6 +76,7 @@ const getStats = async (req, res) => {
     const totalBalance = walletAggregation[0]?.totalBalance || 0;
 
     res.status(200).json({
+      success: true,
       totalUsers,
       totalClients,
       totalTruckers,
@@ -75,7 +88,10 @@ const getStats = async (req, res) => {
     });
   } catch (error) {
     console.error('User stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 

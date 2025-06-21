@@ -1,12 +1,11 @@
-// models/user/image.schema.js
 const mongoose = require("mongoose");
 
-const image_schema = new mongoose.Schema(
+const imageSchema = new mongoose.Schema(
   {
     data: Buffer,
-    content_type: String,
+    contentType: String, // <-- camelCase!
   },
   { _id: false }
 );
 
-module.exports = image_schema;
+module.exports = imageSchema;

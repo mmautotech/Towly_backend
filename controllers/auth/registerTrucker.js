@@ -3,9 +3,9 @@ const sendSuccessResponse = require("../../utils/success-response");
 
 /**
  * @swagger
- * /auth/register:
+ * /auth/register-trucker:
  *   post:
- *     summary: Register a new client user
+ *     summary: Register a new truck driver
  *     tags:
  *       - Auth
  *     requestBody:
@@ -30,7 +30,7 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 type: string
  *     responses:
  *       201:
- *         description: User registered successfully with token
+ *         description: Trucker registered successfully
  *         content:
  *           application/json:
  *             schema:
@@ -50,9 +50,9 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                     role:
  *                       type: string
  *       400:
- *         description: Email or phone already exists
+ *         description: Duplicate phone or email
  */
-const registerUser = async (req, res, next) => {
+const registerTrucker = async (req, res, next) => {
   try {
     const { user_name, phone, email, password } = req.body;
 
@@ -61,15 +61,15 @@ const registerUser = async (req, res, next) => {
       phone,
       email,
       password,
-      role: "client",
-      status: "active",
+      role: "truck",
+      status: "blocked",
     });
 
     await newUser.save();
 
     const token = newUser.generateToken();
 
-    sendSuccessResponse(res, "User created successfully.", {
+    sendSuccessResponse(res, "Trucker registered successfully. Awaiting approval.", {
       token,
       user_id: newUser._id,
       role: newUser.role,
@@ -88,4 +88,4 @@ const registerUser = async (req, res, next) => {
   }
 };
 
-module.exports = registerUser;
+module.exports = registerTrucker;

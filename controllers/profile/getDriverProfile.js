@@ -1,5 +1,3 @@
-// controllers/user/getDriverProfile.js
-
 const { User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 const {
@@ -19,58 +17,23 @@ const {
  *     responses:
  *       200:
  *         description: Driver profile fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Driver profile fetched.
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                 data:
- *                   type: object
- *                   properties:
- *                     firstName:
- *                       type: string
- *                     lastName:
- *                       type: string
- *                     dateOfBirth:
- *                       type: string
- *                       example: "12-12-1996"
- *                     licenseNumber:
- *                       type: string
- *                     licenseExpiry:
- *                       type: string
- *                       example: "12-12-2031"
- *                     licenseFront:
- *                       type: string
- *                       description: Base64-encoded compressed image string
- *                     licenseFrontSize:
- *                       type: integer
- *                       description: Size in bytes of the returned image
- *                     licenseBack:
- *                       type: string
- *                       description: Base64-encoded compressed image string
- *                     licenseBackSize:
- *                       type: integer
- *                       description: Size in bytes of the returned image
- *                     licenseSelfie:
- *                       type: string
- *                       description: Base64-encoded compressed image string
- *                     licenseSelfieSize:
- *                       type: integer
- *                       description: Size in bytes of the returned image
+ *       403:
+ *         description: Only users with the truck role can access this endpoint
+ *       404:
+ *         description: User not found
  */
 exports.getDriverProfile = async (req, res, next) => {
   try {
+    // 🚫 Restrict to truck users only
+    if (req.user.role !== "truck") {
+      return res.status(403).json({
+        success: false,
+        message: "Only users with the truck role can access driver profile.",
+      });
+    }
+
     const user = await User.findById(req.user.id).select(
-      "truck_profile.driver_profile"
+      "phone email truck_profile.driver_profile"
     );
     if (!user) {
       return res
@@ -103,8 +66,10 @@ exports.getDriverProfile = async (req, res, next) => {
     const selfie = pickImage(dp.license_selfie);
 
     sendSuccessResponse(res, "Driver profile fetched.", {
+      phone: user.phone || "",
       firstName: dp.first_name || "",
       lastName: dp.last_name || "",
+      email: user.email || "",
       dateOfBirth: formatDateString(dp.date_of_birth),
       licenseNumber: dp.license_number || "",
       licenseExpiry: formatDateString(dp.license_expiry),

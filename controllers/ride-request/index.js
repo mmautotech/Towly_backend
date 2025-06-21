@@ -9,8 +9,8 @@ const getDriverTrackingByClient = require("./getDriverTrackingByClient");
 const getActiveServiceByTruck = require("./getActiveServiceByTruck");
 const getAppliedRide_postedRequests = require("./getAppliedRideRequests");
 const getUnappliedRide_postedRequests = require("./getUnappliedRideRequests");
-const getHistoryClient = require("./getHistoryClient");
-const getHistoryTruck = require("./getHistoryTruck");
+const getHistoryClient = require("../history/getHistoryClient");
+const getHistoryTruck = require("../history/getHistoryTruck");
 const getTrackingInfoByUser = require("./getTrackingInfoByUser");
 
 // Offers related
@@ -36,7 +36,5 @@ module.exports = {
   addOfferToRideRequest,
   addCounterOfferToRideRequest,
 
-  getHistoryClient,
-  getHistoryTruck,
   getTrackingInfoByUser,
 };

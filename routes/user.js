@@ -2,18 +2,16 @@ const express = require("express");
 const router = express.Router();
 const authenticateToken = require("../middlewares/authenticateToken");
 
-const {
-  getBasicUserInfo,
-  getBasicTruckInfo,
-  UpdateRatingClient,
-  UpdateRatingVehicle,
-  UpdateLocationVehicle,
-} = require("../controllers/user");
+// ✅ Unified modular user controller
+const user = require("../controllers/user-info");
 
-router.post("/user", authenticateToken, getBasicUserInfo);
-router.get("/truck", authenticateToken, getBasicTruckInfo);
-router.post("/client/update-rating", authenticateToken, UpdateRatingClient);
-router.post("/vehicle/update-rating", authenticateToken, UpdateRatingVehicle);
-router.post("/vehicle/update-location", authenticateToken, UpdateLocationVehicle);
+router.get("/basic", authenticateToken, user.getBasicInfo);
+router.post("/target/update-rating", authenticateToken, user.UpdateRating);
+router.post("/update-location", authenticateToken, user.UpdateLocationVehicle);
+
+// Optional settings routes (if routed here)
+router.get("/settings", authenticateToken, user.getSettings);
+router.put("/settings", authenticateToken, user.updateSettings);
+
 
 module.exports = router;

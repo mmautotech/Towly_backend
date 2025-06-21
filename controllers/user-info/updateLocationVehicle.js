@@ -1,5 +1,3 @@
-// controllers/user/UpdateLocationVehicle.js
-
 const { User } = require("../../models");
 
 /**
@@ -62,6 +60,8 @@ const { User } = require("../../models");
  *         description: Bad request — missing or malformed geo_location
  *       401:
  *         description: Unauthorized — invalid or missing token
+ *       403:
+ *         description: Forbidden — only trucks can update vehicle location
  *       404:
  *         description: Vehicle profile not found for this user
  */
@@ -72,8 +72,18 @@ exports.UpdateLocationVehicle = async function UpdateLocationVehicle(
 ) {
   try {
     const { geo_location } = req.body;
+    const userId = req.user.id;
+    const role = req.user.role;
 
-    // Validate geo_location object
+    // ✅ Role restriction
+    if (role !== "truck") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only truck users can update vehicle location.",
+      });
+    }
+
+    // 🧭 GeoJSON validation
     if (
       !geo_location ||
       geo_location.type !== "Point" ||
@@ -89,10 +99,7 @@ exports.UpdateLocationVehicle = async function UpdateLocationVehicle(
       });
     }
 
-    // Identify the caller by JWT
-    const userId = req.user.id;
-
-    // Load the user
+    // 🔍 Load user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -101,25 +108,19 @@ exports.UpdateLocationVehicle = async function UpdateLocationVehicle(
       });
     }
 
-    // Ensure nested structures exist
-    if (!user.truck_profile) {
-      user.truck_profile = {};
-    }
-    if (!user.truck_profile.vehicle_profile) {
-      user.truck_profile.vehicle_profile = {};
-    }
+    // 🚚 Ensure nested structure
+    user.truck_profile = user.truck_profile || {};
+    user.truck_profile.vehicle_profile = user.truck_profile.vehicle_profile || {};
 
-    // Update geo_location
+    // 📍 Update location
     user.truck_profile.vehicle_profile.geo_location = {
       type: "Point",
       coordinates: geo_location.coordinates,
     };
 
-    // Mark modified & save
     user.markModified("truck_profile.vehicle_profile.geo_location");
     await user.save();
 
-    // Return only status, message, timestamp
     return res.status(200).json({
       success: true,
       message: "Vehicle location updated successfully.",

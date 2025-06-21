@@ -1,8 +1,11 @@
+const mongoose = require("mongoose");
+const { Wallet, Transaction } = require("../../models/finance");
+
 /**
  * @swagger
  * /wallet/debit:
  *   post:
- *     summary: Debit 10% from wallet for accepted truck ride
+ *     summary: Submit a debit transaction (client only)
  *     tags: [Finance]
  *     security:
  *       - bearerAuth: []
@@ -13,76 +16,133 @@
  *           schema:
  *             type: object
  *             required:
- *               - rideId
- *               - totalFare
+ *               - amount
  *             properties:
- *               rideId:
- *                 type: string
- *               totalFare:
+ *               amount:
  *                 type: number
+ *                 example: 50
+ *               remarks:
+ *                 type: string
+ *                 example: "Ride payment"
  *     responses:
- *       200:
- *         description: Wallet debited successfully
+ *       201:
+ *         description: Debit transaction successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 transaction:
+ *                   type: object
  *       400:
- *         description: Insufficient balance or invalid input
+ *         description: Invalid input or insufficient balance
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Wallet not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       500:
  *         description: Wallet debit failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  */
-const mongoose = require("mongoose");
-const { Wallet, Transaction } = require("../../models/finance");
 
 module.exports = async function debitWallet(req, res) {
   const session = await mongoose.startSession();
   try {
-    const { rideId, totalFare } = req.body;
+    const { amount, remarks } = req.body;
     const userId = req.user.id;
 
-    if (!rideId || !totalFare || isNaN(totalFare) || totalFare <= 0) {
-      return res.status(400).json({ error: "Invalid rideId or totalFare" });
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount"
+      });
     }
-
-    const deduction = parseFloat((totalFare * 0.10).toFixed(2)); // ✅ 10% fee now
 
     session.startTransaction();
 
+    // Find wallet for client
     const wallet = await Wallet.findOne({ user_id: userId }).session(session);
-    if (!wallet || wallet.balance < deduction) {
+    if (!wallet) {
       await session.abortTransaction();
-      return res.status(400).json({ error: "Insufficient balance" });
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Wallet not found"
+      });
     }
 
-    wallet.balance -= deduction;
-    wallet.last_transaction = null;
-    await wallet.save({ session });
+    // Check sufficient balance
+    if (wallet.balance < amount) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient balance"
+      });
+    }
 
-    const [transaction] = await Transaction.create(
-      [{
-        user_id: userId,
-        wallet_id: wallet._id,
-        type: "debit",
-        amount: deduction,
-        status: "confirmed",
-        remarks: `10% deduction for ride ${rideId}`,
-        log: [{
-          action: "confirmed",
-          by: userId,
-          note: `Auto-debit for ride ${rideId}`,
-        }],
-      }],
-      { session }
-    );
+    // Create debit transaction
+    const transaction = await Transaction.create([{
+      user_id: userId,
+      wallet_id: wallet._id,
+      type: "debit",
+      amount,
+      remarks: remarks || null,
+      log: [{
+        action: "created",
+        by: userId,
+        note: "User debited wallet"
+      }]
+    }], { session });
 
-    wallet.last_transaction = transaction._id;
+    // Update wallet balance and last transaction
+    wallet.balance -= amount;
+    wallet.last_transaction = transaction[0]._id;
     await wallet.save({ session });
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(200).json({ message: "Wallet debited", transaction });
+    return res.status(201).json({
+      success: true,
+      message: "Debit transaction successful",
+      transaction: transaction[0],
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("❌ Wallet debit error:", err);
-    return res.status(500).json({ error: "Wallet debit failed" });
+    console.error("❌ Wallet debit failed:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Wallet debit failed"
+    });
   }
 };
