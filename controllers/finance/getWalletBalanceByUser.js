@@ -10,7 +10,7 @@ const { Wallet } = require("../../models/finance");
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Wallet balance retrieved
+ *         description: Wallet balance retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -18,12 +18,15 @@ const { Wallet } = require("../../models/finance");
  *               properties:
  *                 success:
  *                   type: boolean
- *                 wallet:
- *                   type: object
+ *                 balance:
+ *                   type: number
+ *                 last_transaction:
+ *                   type: string
+ *                   description: ObjectId of the last transaction
  *                 message:
  *                   type: string
  *       404:
- *         description: Wallet not found
+ *         description: Wallet not found for user
  *         content:
  *           application/json:
  *             schema:
@@ -48,24 +51,27 @@ const { Wallet } = require("../../models/finance");
 
 module.exports = async function getWalletBalanceByUser(req, res) {
   try {
-    const wallet = await Wallet.findOne({ user_id: req.user.id });
+    // Only fetch wallet belonging to authenticated user
+    const wallet = await Wallet.findOne({ user_id: req.user.id }).lean();
     if (!wallet) {
       return res.status(404).json({
         success: false,
-        message: "Wallet not found"
+        message: "Wallet not found for this user.",
       });
     }
 
+    // Respond with only the needed fields for security & clarity
     return res.status(200).json({
       success: true,
-      wallet,
-      message: "Wallet balance retrieved"
+      balance: wallet.balance || 0,
+      message: "Wallet balance retrieved successfully",
+      last_transaction: wallet.last_transaction || null,
     });
   } catch (err) {
-    console.error("Failed to fetch wallet:", err);
+    console.error("Failed to fetch wallet balance:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch wallet"
+      message: "Failed to fetch wallet balance. Please try again.",
     });
   }
 };

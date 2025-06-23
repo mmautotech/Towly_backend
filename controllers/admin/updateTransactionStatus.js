@@ -35,6 +35,17 @@ const { Wallet, Transaction } = require("../../models/finance");
  *     responses:
  *       200:
  *         description: Transaction updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 transaction:
+ *                   type: object
  *       400:
  *         description: Transaction already processed or bad request
  *       403:
@@ -48,7 +59,6 @@ const { Wallet, Transaction } = require("../../models/finance");
 module.exports = async function updateTransactionStatus(req, res) {
   const session = await mongoose.startSession();
   try {
-    // Admin check for defense-in-depth
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -66,52 +76,59 @@ module.exports = async function updateTransactionStatus(req, res) {
         message: "Invalid status. Use 'confirmed' or 'cancelled'."
       });
     }
+    if (note && note.length > 255) {
+      return res.status(400).json({
+        success: false,
+        message: "Note too long (max 255 chars)."
+      });
+    }
 
-    // Fetch transaction
+    // Start transaction session early for snapshot safety
+    session.startTransaction();
+
+    // Fetch transaction (within session)
     const transaction = await Transaction.findById(transactionId).session(session);
     if (!transaction) {
+      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: "Transaction not found"
       });
     }
-
-    // Prevent double processing
     if (transaction.status !== "pending") {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Transaction is already processed."
       });
     }
+    if (transaction.type !== "credit") {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Only credit transactions can be updated via this endpoint."
+      });
+    }
 
     const wallet = await Wallet.findById(transaction.wallet_id).session(session);
     if (!wallet) {
+      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: "Associated wallet not found"
       });
     }
 
-    session.startTransaction();
-
     if (status === "confirmed") {
-      if (transaction.type === "credit") {
-        wallet.balance += transaction.amount;
-      } else if (transaction.type === "debit") {
-        if (wallet.balance < transaction.amount) {
-          await session.abortTransaction();
-          return res.status(400).json({
-            success: false,
-            message: "Insufficient funds"
-          });
-        }
-        wallet.balance -= transaction.amount;
-      }
+      wallet.balance += transaction.amount;
       wallet.last_transaction = transaction._id;
       await wallet.save({ session });
+      transaction.balanceAfter = wallet.balance;
+    } else if (status === "cancelled") {
+      // Cancelled: don't change wallet balance
+      transaction.balanceAfter = wallet.balance;
     }
 
-    // Update transaction
     transaction.status = status;
     transaction.log.push({
       action: status,
@@ -121,20 +138,26 @@ module.exports = async function updateTransactionStatus(req, res) {
 
     await transaction.save({ session });
     await session.commitTransaction();
-    session.endSession();
+
+    const tx = transaction.toObject();
+    delete tx.__v;
+    if (tx.log && Array.isArray(tx.log)) {
+      tx.log = tx.log.map(({ action, by, note, at }) => ({ action, by, note, at }));
+    }
 
     return res.status(200).json({
       success: true,
       message: `Transaction ${status}`,
-      transaction,
+      transaction: tx,
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session.inTransaction()) await session.abortTransaction();
     console.error("❌ Transaction update error:", err);
     return res.status(500).json({
       success: false,
       message: "Failed to update transaction"
     });
+  } finally {
+    session.endSession();
   }
 };

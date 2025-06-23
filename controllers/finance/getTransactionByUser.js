@@ -4,7 +4,7 @@ const { Transaction } = require("../../models/finance");
  * @swagger
  * /wallet/transactions:
  *   get:
- *     summary: Get current truck user's transaction history with filters and pagination
+ *     summary: Get current truck user's transaction history with filters, pagination, and log details (with user names in log)
  *     tags: [Finance]
  *     security:
  *       - bearerAuth: []
@@ -32,14 +32,16 @@ const { Transaction } = require("../../models/finance");
  *         schema:
  *           type: integer
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 20
+ *         description: Number of transactions per page
  *     responses:
  *       200:
- *         description: Filtered and paginated truck user's transactions
+ *         description: Filtered and paginated truck user's transactions (descending by date)
  *         content:
  *           application/json:
  *             schema:
@@ -55,6 +57,41 @@ const { Transaction } = require("../../models/finance");
  *                   type: integer
  *                 transactions:
  *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       amount:
+ *                         type: number
+ *                       type:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       remarks:
+ *                         type: string
+ *                       proof_details:
+ *                         type: string
+ *                       balanceAfter:
+ *                         type: number
+ *                       log:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             action:
+ *                               type: string
+ *                             by:
+ *                               type: string
+ *                               description: Name or email of the user who performed the action
+ *                             note:
+ *                               type: string
+ *                             at:
+ *                               type: string
+ *                               format: date-time
  *                 message:
  *                   type: string
  *       403:
@@ -83,59 +120,78 @@ const { Transaction } = require("../../models/finance");
 
 module.exports = async function getTransactionByUser(req, res) {
   try {
-    // Ensure user is truck (in practice, use isTruck middleware in router)
+    // Defensive: Ensure truck user
     if (!req.user || req.user.role !== "truck") {
       return res.status(403).json({
         success: false,
-        message: "Access denied. Truck users only."
+        message: "Access denied. Truck users only.",
       });
     }
 
     const userId = req.user.id;
-    const {
-      status,
-      from,
-      to,
-      page = 1,
-      limit = 20,
-    } = req.query;
+    const { status, from, to, page = 1, limit = 20 } = req.query;
 
-    const query = { user_id: userId };
+    // Date range validation
+    let fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+    let toDate = new Date();
+    if (from && !isNaN(Date.parse(from))) fromDate = new Date(from);
+    if (to && !isNaN(Date.parse(to))) toDate = new Date(to);
 
-    // Optional status filter
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(Math.max(1, parseInt(limit, 10) || 20), 100);
+
+    const query = {
+      user_id: userId,
+      createdAt: { $gte: fromDate, $lte: toDate },
+    };
     if (status && ["pending", "confirmed", "cancelled"].includes(status)) {
       query.status = status;
     }
 
-    // Date range filter
-    const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-    const toDate = to ? new Date(to) : new Date();
+    // Descending order by date (newest first)
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    query.createdAt = { $gte: fromDate, $lte: toDate };
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
+    // Populate log.by (the user)
     const [transactions, total] = await Promise.all([
       Transaction.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(parseInt(limit)),
+        .limit(parsedLimit)
+        .select("_id amount type status createdAt remarks proof_details balanceAfter log")
+        .populate({
+          path: "log.by",
+          select: "name email",
+        })
+        .lean(),
       Transaction.countDocuments(query),
     ]);
 
+    // Transform log[].by to user name or email
+    const transactionsWithLogNames = transactions.map(tx => ({
+      ...tx,
+      log: Array.isArray(tx.log)
+        ? tx.log.map(l => ({
+            ...l,
+            by: l.by
+              ? (l.by.name || l.by.email || String(l.by))
+              : "",
+          }))
+        : [],
+    }));
+
     return res.status(200).json({
       success: true,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: parsedPage,
+      limit: parsedLimit,
       total,
-      transactions,
-      message: "Truck user's transactions fetched successfully"
+      transactions: transactionsWithLogNames,
+      message: "Truck user's transactions fetched successfully (newest first)",
     });
   } catch (err) {
     console.error("Transaction fetch error:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch transactions"
+      message: "Failed to fetch transactions",
     });
   }
 };
