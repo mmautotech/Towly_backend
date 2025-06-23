@@ -154,7 +154,7 @@ module.exports = async function getTransactionByUser(req, res) {
     // Populate log.by (the user)
     const [transactions, total] = await Promise.all([
       Transaction.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(parsedLimit)
         .select("_id amount type status createdAt remarks proof_details balanceAfter log")
