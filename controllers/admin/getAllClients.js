@@ -1,10 +1,13 @@
-const { User } = require('../../models');
+const { User } = require("../../models");
 
-const formatBase64Image = (data) => data ? `base64,${data.toString('base64')}` : '';
+const formatBase64Image = (data) =>
+  data ? `base64,${data.toString("base64")}` : "";
 
 const formatPhoto = (photoObj) => {
-  if (!photoObj) return '';
-  return photoObj.original?.data ? formatBase64Image(photoObj.original.data) : '';
+  if (!photoObj) return "";
+  return photoObj.original?.data
+    ? formatBase64Image(photoObj.original.data)
+    : "";
 };
 
 const formatUsersWithProfiles = (users) => {
@@ -20,23 +23,23 @@ const formatUsersWithProfiles = (users) => {
       updatedAt: user.updatedAt,
     };
 
-    if (user.role === 'client') {
+    if (user.role === "client") {
       const profile = user.client_profile || {};
       const settings = user.settings?.client_settings || {};
       return {
         ...baseInfo,
         profile_photo: formatPhoto(profile.profile_photo),
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
+        first_name: profile.first_name || "",
+        last_name: profile.last_name || "",
         rating: profile.rating || 0,
         ratings_count: profile.ratings_count || 0,
-        address: profile.address || '',
+        address: profile.address || "",
         client_settings: {
-          language: settings.language || '',
-          currency: settings.currency || '',
-          distance_unit: settings.distance_unit || '',
-          time_format: settings.time_format || '',
-          radius: settings.radius || '',
+          language: settings.language || "",
+          currency: settings.currency || "",
+          distance_unit: settings.distance_unit || "",
+          time_format: settings.time_format || "",
+          radius: settings.radius || "",
         },
       };
     }
@@ -53,31 +56,41 @@ const projection = {
   status: 1,
   createdAt: 1,
   updatedAt: 1,
-  'client_profile.first_name': 1,
-  'client_profile.last_name': 1,
-  'client_profile.rating': 1,
-  'client_profile.ratings_count': 1,
-  'client_profile.address': 1,
-  'client_profile.profile_photo.original.data': 1,
-  'settings.client_settings': 1,
+  "client_profile.first_name": 1,
+  "client_profile.last_name": 1,
+  "client_profile.rating": 1,
+  "client_profile.ratings_count": 1,
+  "client_profile.address": 1,
+  "client_profile.profile_photo.original.data": 1,
+  "settings.client_settings": 1,
 };
 
 const getAllClients = async (req, res) => {
   try {
-    // Defensive: Confirm current user is admin
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({
-        message: 'Forbidden: Admins only.',
-      });
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: Admins only." });
     }
 
-    const users = await User.find({ role: 'client' }, projection).lean();
-    res.status(200).json(formatUsersWithProfiles(users));
-  } catch (err) {
-    console.error('Fetch error:', err.message);
-    res.status(500).json({
-      message: 'Internal Server Error',
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 5; // Always 5 per page
+    const skip = (page - 1) * limit;
+
+    const total = await User.countDocuments({ role: "client" });
+
+    const users = await User.find({ role: "client" }, projection)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.status(200).json({
+      total,
+      page,
+      limit,
+      users: formatUsersWithProfiles(users),
     });
+  } catch (err) {
+    console.error("Fetch error:", err.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 

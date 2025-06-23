@@ -15,6 +15,16 @@ const Wallet = require("../../models/finance/wallet.schema");
  *         schema:
  *           type: string
  *         description: Optional user ID to get wallet for specific user
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of wallets per page (default 10)
  *     responses:
  *       200:
  *         description: Wallet(s) retrieved successfully
@@ -28,36 +38,39 @@ const Wallet = require("../../models/finance/wallet.schema");
 
 module.exports = async function getWallets(req, res) {
   try {
-    // Defensive: Confirm current user is admin
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({
-        message: "Forbidden: Admins only.",
-      });
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: Admins only." });
     }
 
     const { user_id } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 10);
+    const skip = (page - 1) * limit;
 
-    // Build query filter
     const filter = {};
     if (user_id) {
       if (!mongoose.Types.ObjectId.isValid(user_id)) {
-        return res.status(400).json({
-          message: "Invalid user_id format",
-        });
+        return res.status(400).json({ message: "Invalid user_id format" });
       }
       filter.user_id = user_id;
     }
 
-    // Fetch wallets with most recently updated first
+    const total = await Wallet.countDocuments(filter);
+
     const wallets = await Wallet.find(filter)
       .populate("user_id", "user_name email phone role")
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    return res.status(200).json(wallets);
+    return res.status(200).json({
+      total,
+      page,
+      limit,
+      wallets,
+    });
   } catch (err) {
     console.error("Error fetching wallets:", err);
-    return res.status(500).json({
-      message: "Failed to fetch wallets"
-    });
+    return res.status(500).json({ message: "Failed to fetch wallets" });
   }
 };

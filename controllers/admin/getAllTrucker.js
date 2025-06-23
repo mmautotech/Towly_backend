@@ -1,4 +1,4 @@
-const { User } = require('../../models');
+const { User } = require("../../models");
 
 /**
  * @swagger
@@ -9,6 +9,17 @@ const { User } = require('../../models');
  *       - Admin
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
  *     responses:
  *       200:
  *         description: List of all trucker users
@@ -17,11 +28,14 @@ const { User } = require('../../models');
  *       500:
  *         description: Server error
  */
-const formatBase64Image = (data) => data ? `base64,${data.toString('base64')}` : '';
+const formatBase64Image = (data) =>
+  data ? `base64,${data.toString("base64")}` : "";
 
 const formatPhoto = (photoObj) => {
-  if (!photoObj) return '';
-  return photoObj.original?.data ? formatBase64Image(photoObj.original.data) : '';
+  if (!photoObj) return "";
+  return photoObj.original?.data
+    ? formatBase64Image(photoObj.original.data)
+    : "";
 };
 
 const formatUsersWithProfiles = (users) => {
@@ -37,7 +51,7 @@ const formatUsersWithProfiles = (users) => {
       updatedAt: user.updatedAt,
     };
 
-    if (user.role === 'truck') {
+    if (user.role === "truck") {
       const truck = user.truck_profile || {};
       const vehicle = truck.vehicle_profile || {};
       const driver = truck.driver_profile || {};
@@ -51,29 +65,29 @@ const formatUsersWithProfiles = (users) => {
           ratings_count: vehicle.ratings_count || 0,
           geo_location: truck.geo_location || null,
           vehicle_profile: {
-            registration_number: vehicle.registration_number || '',
-            make: vehicle.make || '',
-            model: vehicle.model || '',
-            color: vehicle.color || '',
+            registration_number: vehicle.registration_number || "",
+            make: vehicle.make || "",
+            model: vehicle.model || "",
+            color: vehicle.color || "",
             vehicle_photo: formatPhoto(vehicle.vehicle_photo),
           },
         },
         driver_profile: {
-          first_name: driver.first_name || '',
-          last_name: driver.last_name || '',
+          first_name: driver.first_name || "",
+          last_name: driver.last_name || "",
           date_of_birth: driver.date_of_birth || null,
-          license_number: driver.license_number || '',
+          license_number: driver.license_number || "",
           license_expiry: driver.license_expiry || null,
           license_front: formatPhoto(driver.license_front),
           license_back: formatPhoto(driver.license_back),
           license_selfie: formatPhoto(driver.license_selfie),
         },
         truck_settings: {
-          language: settings.language || '',
-          currency: settings.currency || '',
-          distance_unit: settings.distance_unit || '',
-          time_format: settings.time_format || '',
-          radius: settings.radius || '',
+          language: settings.language || "",
+          currency: settings.currency || "",
+          distance_unit: settings.distance_unit || "",
+          time_format: settings.time_format || "",
+          radius: settings.radius || "",
         },
       };
     }
@@ -90,40 +104,50 @@ const projection = {
   status: 1,
   createdAt: 1,
   updatedAt: 1,
-  'truck_profile.geo_location': 1,
-  'truck_profile.vehicle_profile.registration_number': 1,
-  'truck_profile.vehicle_profile.make': 1,
-  'truck_profile.vehicle_profile.model': 1,
-  'truck_profile.vehicle_profile.color': 1,
-  'truck_profile.vehicle_profile.rating': 1,
-  'truck_profile.vehicle_profile.ratings_count': 1,
-  'truck_profile.vehicle_profile.vehicle_photo.original.data': 1,
-  'truck_profile.driver_profile.first_name': 1,
-  'truck_profile.driver_profile.last_name': 1,
-  'truck_profile.driver_profile.date_of_birth': 1,
-  'truck_profile.driver_profile.license_number': 1,
-  'truck_profile.driver_profile.license_expiry': 1,
-  'truck_profile.driver_profile.license_front.original.data': 1,
-  'truck_profile.driver_profile.license_back.original.data': 1,
-  'truck_profile.driver_profile.license_selfie.original.data': 1,
-  'settings.truck_settings': 1,
+  "truck_profile.geo_location": 1,
+  "truck_profile.vehicle_profile.registration_number": 1,
+  "truck_profile.vehicle_profile.make": 1,
+  "truck_profile.vehicle_profile.model": 1,
+  "truck_profile.vehicle_profile.color": 1,
+  "truck_profile.vehicle_profile.rating": 1,
+  "truck_profile.vehicle_profile.ratings_count": 1,
+  "truck_profile.vehicle_profile.vehicle_photo.original.data": 1,
+  "truck_profile.driver_profile.first_name": 1,
+  "truck_profile.driver_profile.last_name": 1,
+  "truck_profile.driver_profile.date_of_birth": 1,
+  "truck_profile.driver_profile.license_number": 1,
+  "truck_profile.driver_profile.license_expiry": 1,
+  "truck_profile.driver_profile.license_front.original.data": 1,
+  "truck_profile.driver_profile.license_back.original.data": 1,
+  "truck_profile.driver_profile.license_selfie.original.data": 1,
+  "settings.truck_settings": 1,
 };
 
 const getAllTrucker = async (req, res) => {
   try {
-    // Explicit check: Only admins can access
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || req.user.role !== "admin") {
       return res.status(403).json({
-        message: 'Forbidden: Admins only.',
+        message: "Forbidden: Admins only.",
       });
     }
 
-    const users = await User.find({ role: 'truck' }, projection).lean();
-    res.status(200).json(formatUsersWithProfiles(users));
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 5, 1);
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      User.find({ role: "truck" }, projection).skip(skip).limit(limit).lean(),
+      User.countDocuments({ role: "truck" }),
+    ]);
+
+    res.status(200).json({
+      users: formatUsersWithProfiles(users),
+      total,
+    });
   } catch (err) {
-    console.error('Fetch error:', err.message);
+    console.error("Fetch error:", err.message);
     res.status(500).json({
-      message: 'Internal Server Error',
+      message: "Internal Server Error",
     });
   }
 };

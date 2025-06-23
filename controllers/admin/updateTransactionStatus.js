@@ -59,7 +59,7 @@ const { Wallet, Transaction } = require("../../models/finance");
 module.exports = async function updateTransactionStatus(req, res) {
   const session = await mongoose.startSession();
   try {
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Admins only.",
@@ -73,13 +73,13 @@ module.exports = async function updateTransactionStatus(req, res) {
     if (!["confirmed", "cancelled"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Use 'confirmed' or 'cancelled'."
+        message: "Invalid status. Use 'confirmed' or 'cancelled'.",
       });
     }
     if (note && note.length > 255) {
       return res.status(400).json({
         success: false,
-        message: "Note too long (max 255 chars)."
+        message: "Note too long (max 255 chars).",
       });
     }
 
@@ -87,35 +87,39 @@ module.exports = async function updateTransactionStatus(req, res) {
     session.startTransaction();
 
     // Fetch transaction (within session)
-    const transaction = await Transaction.findById(transactionId).session(session);
+    const transaction = await Transaction.findById(transactionId).session(
+      session
+    );
     if (!transaction) {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
-        message: "Transaction not found"
+        message: "Transaction not found",
       });
     }
     if (transaction.status !== "pending") {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "Transaction is already processed."
+        message: "Transaction is already processed.",
       });
     }
     if (transaction.type !== "credit") {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "Only credit transactions can be updated via this endpoint."
+        message: "Only credit transactions can be updated via this endpoint.",
       });
     }
 
-    const wallet = await Wallet.findById(transaction.wallet_id).session(session);
+    const wallet = await Wallet.findById(transaction.wallet_id).session(
+      session
+    );
     if (!wallet) {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
-        message: "Associated wallet not found"
+        message: "Associated wallet not found",
       });
     }
 
@@ -133,7 +137,11 @@ module.exports = async function updateTransactionStatus(req, res) {
     transaction.log.push({
       action: status,
       by: req.user.id,
-      note: note || (status === "cancelled" ? "Transaction cancelled" : "Transaction confirmed"),
+      note:
+        note ||
+        (status === "cancelled"
+          ? "Transaction cancelled"
+          : "Transaction confirmed"),
     });
 
     await transaction.save({ session });
@@ -142,7 +150,12 @@ module.exports = async function updateTransactionStatus(req, res) {
     const tx = transaction.toObject();
     delete tx.__v;
     if (tx.log && Array.isArray(tx.log)) {
-      tx.log = tx.log.map(({ action, by, note, at }) => ({ action, by, note, at }));
+      tx.log = tx.log.map(({ action, by, note, at }) => ({
+        action,
+        by,
+        note,
+        at,
+      }));
     }
 
     return res.status(200).json({
@@ -155,7 +168,7 @@ module.exports = async function updateTransactionStatus(req, res) {
     console.error("❌ Transaction update error:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to update transaction"
+      message: "Failed to update transaction",
     });
   } finally {
     session.endSession();
