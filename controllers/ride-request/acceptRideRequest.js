@@ -78,8 +78,8 @@ const acceptRideRequest = async (req, res, next) => {
       });
     }
 
-    // 5. Retrieve commission wallet (admin Bryan)
-    const commissionUser = await User.findOne({ user_name: "Bryan", role: "admin" }).session(session);
+    // 5. Retrieve commission wallet (admin admin)
+    const commissionUser = await User.findOne({ user_name: "admin", role: "admin" }).session(session);
     if (!commissionUser) {
       await session.abortTransaction();
       return res.status(500).json({

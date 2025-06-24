@@ -1,7 +1,4 @@
 module.exports = {
-  // Client Api
-  debitWallet: require("./debitWallet"),
-
   // Truck Apis
   creditWallet: require("./creditWallet"),
   getWalletBalanceByUser: require("./getWalletBalanceByUser"),

@@ -7,24 +7,24 @@ const User = require("./models/user");
 (async () => {
   await mongoose.connect(process.env.MONGO_URI);
 
-  // Find Bryan
-  const bryan = await User.findOne({ user_name: "Bryan", role: "admin" });
-  if (!bryan) {
-    console.error("No user found with name 'bryan' and role 'admin'.");
+  // Find admin
+  const admin = await User.findOne({ user_name: "admin", role: "admin" });
+  if (!admin) {
+    console.error("No user found with name 'admin' and role 'admin'.");
     return;
   }
 
   // Create wallet if not exists
-  let wallet = await Wallet.findOne({ user_id: bryan._id });
+  let wallet = await Wallet.findOne({ user_id: admin._id });
   if (!wallet) {
     wallet = await Wallet.create({
-      user_id: bryan._id,
+      user_id: admin._id,
       balance: 0.0,
       currency: "GBP",
     });
-    console.log("Wallet created for Bryan:", wallet._id);
+    console.log("Wallet created for admin:", wallet._id);
   } else {
-    console.log("Bryan already has a wallet:", wallet._id);
+    console.log("admin already has a wallet:", wallet._id);
   }
 
   await mongoose.disconnect();
