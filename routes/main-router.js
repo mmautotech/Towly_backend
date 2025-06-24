@@ -11,10 +11,10 @@ router.use("/admin", require("./admin.js"));
 router.use("/history", require("./history"));
 router.use("/profile", require("./profile"));
 router.use("/user", require("./user"));
-
 router.use("/wallet", require("./finance"));
 
 router.use("/", require("./ride-request"));
+
 router.use("/", require("./message.js"));
 
 module.exports = router;
