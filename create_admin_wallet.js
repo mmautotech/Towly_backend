@@ -8,7 +8,7 @@ const User = require("./models/user");
   await mongoose.connect(process.env.MONGO_URI);
 
   // Find admin
-  const admin = await User.findOne({ user_name: "admin", role: "admin" });
+  const admin = await User.findOne({ user_name: "Admin", role: "admin" });
   if (!admin) {
     console.error("No user found with name 'admin' and role 'admin'.");
     return;

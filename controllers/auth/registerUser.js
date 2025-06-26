@@ -28,6 +28,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 type: string
  *               password:
  *                 type: string
+ *               terms_agreed:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: User registered successfully with token
@@ -54,7 +56,21 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const registerUser = async (req, res, next) => {
   try {
-    const { user_name, phone, email, password } = req.body;
+    const {
+      user_name,
+      phone,
+      email,
+      password,
+      terms_agreed = true // fallback to true if not provided
+    } = req.body;
+
+    // Optional: Check explicitly if user denied terms
+    if (terms_agreed === false) {
+      return res.status(400).json({
+        success: false,
+        message: "You must accept the terms and conditions to register.",
+      });
+    }
 
     const newUser = new User({
       user_name,
@@ -63,6 +79,7 @@ const registerUser = async (req, res, next) => {
       password,
       role: "client",
       status: "active",
+      terms_agreed,
     });
 
     await newUser.save();

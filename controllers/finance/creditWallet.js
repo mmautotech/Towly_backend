@@ -1,72 +1,4 @@
-const mongoose = require("mongoose");
 const { Wallet, Transaction } = require("../../models/finance");
-
-/**
- * @swagger
- * /wallet/credit:
- *   post:
- *     summary: Submit a credit transaction (truck only)
- *     tags: [Finance]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - amount
- *             properties:
- *               amount:
- *                 type: number
- *                 example: 200
- *               proof_details:
- *                 type: string
- *                 example: "Bank Transfer #12345"
- *               proof_image_url:
- *                 type: string
- *                 example: "https://files.myapp.com/uploads/proof123.jpg"
- *               remarks:
- *                 type: string
- *                 example: "Weekly top-up"
- *     responses:
- *       201:
- *         description: Transaction submitted
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 transaction:
- *                   type: object
- *       400:
- *         description: Invalid amount or input
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *       500:
- *         description: Wallet credit failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- */
 
 /**
  * Find or create wallet for user
@@ -78,7 +10,6 @@ async function getOrCreateWallet(userId) {
 }
 
 module.exports = async function creditWallet(req, res) {
-  const session = await mongoose.startSession();
   try {
     const { amount, proof_details, proof_image_url, remarks } = req.body;
     const userId = req.user.id;
@@ -103,27 +34,30 @@ module.exports = async function creditWallet(req, res) {
       });
     }
 
-    // At least one proof required, and not empty string
     const hasProofDetails = proof_details && proof_details.trim() !== "";
     const hasProofImageUrl = proof_image_url && proof_image_url.trim() !== "";
+
     if (!hasProofDetails && !hasProofImageUrl) {
       return res.status(400).json({
         success: false,
         message: "Proof details or proof image is required.",
       });
     }
+
     if (hasProofDetails && proof_details.length > 255) {
       return res.status(400).json({
         success: false,
         message: "Proof details too long (max 255 chars)",
       });
     }
+
     if (hasProofImageUrl && proof_image_url.length > 512) {
       return res.status(400).json({
         success: false,
         message: "Proof image URL too long (max 512 chars)",
       });
     }
+
     if (remarks && remarks.length > 255) {
       return res.status(400).json({
         success: false,
@@ -131,51 +65,44 @@ module.exports = async function creditWallet(req, res) {
       });
     }
 
-    session.startTransaction();
-
     // Find or create wallet for user
     const wallet = await getOrCreateWallet(userId);
 
-    // Transaction: balanceAfter is current balance (not updated until admin approves/updates status)
-    const transaction = await Transaction.create(
-      [
+    // Create transaction (status: pending)
+    const transaction = await Transaction.create({
+      user_id: userId,
+      wallet_id: wallet._id,
+      type: "credit",
+      amount: Number(amount),
+      proof_details: hasProofDetails ? proof_details : null,
+      proof_image_url: hasProofImageUrl ? proof_image_url : null,
+      remarks: remarks || null,
+      log: [
         {
-          user_id: userId,
-          wallet_id: wallet._id,
-          type: "credit",
-          amount: Number(amount),
-          proof_details: hasProofDetails ? proof_details : null,
-          proof_image_url: hasProofImageUrl ? proof_image_url : null,
-          remarks: remarks || null,
-          log: [
-            {
-              action: "created",
-              by: userId,
-              note: "User submitted credit request",
-            },
-          ],
-          status: "pending",
-          balanceAfter: wallet.balance, // NOT incremented yet
+          action: "created",
+          by: userId,
+          note: "User submitted credit request",
         },
       ],
-      { session }
-    );
+      status: "pending",
+      balanceAfter: wallet.balance, // Not applied yet
+    });
 
-    // Update wallet's last_transaction reference
+    // Update wallet last_transaction field
     await Wallet.updateOne(
       { _id: wallet._id },
-      { last_transaction: transaction[0]._id },
-      { session }
+      { last_transaction: transaction._id }
     );
 
-    await session.commitTransaction();
-
-    // Clean up response
-    const tx = transaction[0].toObject();
+    // Clean response
+    const tx = transaction.toObject();
     delete tx.__v;
-    if (tx.log && Array.isArray(tx.log)) {
+    if (Array.isArray(tx.log)) {
       tx.log = tx.log.map(({ action, by, note, at }) => ({
-        action, by, note, at,
+        action,
+        by,
+        note,
+        at,
       }));
     }
 
@@ -185,13 +112,10 @@ module.exports = async function creditWallet(req, res) {
       transaction: tx,
     });
   } catch (err) {
-    await session.abortTransaction();
     console.error("❌ Wallet credit failed:", err);
     return res.status(500).json({
       success: false,
       message: "Wallet credit failed",
     });
-  } finally {
-    session.endSession();
   }
 };

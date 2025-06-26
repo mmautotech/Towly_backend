@@ -25,7 +25,7 @@ const formatUsersWithProfiles = (users) => {
 
     if (user.role === "client") {
       const profile = user.client_profile || {};
-      const settings = user.settings?.client_settings || {};
+      const settings = user.settings || {};
       return {
         ...baseInfo,
         profile_photo: formatPhoto(profile.profile_photo),
@@ -62,7 +62,7 @@ const projection = {
   "client_profile.ratings_count": 1,
   "client_profile.address": 1,
   "client_profile.profile_photo.original.data": 1,
-  "settings.client_settings": 1,
+  "settings": 1,
 };
 
 const getAllClients = async (req, res) => {

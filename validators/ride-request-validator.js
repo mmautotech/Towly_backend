@@ -53,6 +53,10 @@ const accept_ride_schema = z.object({
 
 const cancel_ride_schema = post_ride_schema;
 
+const complete_ride_schema = z.object({
+  request_id: z.string().length(24, "Invalid request_id"),
+});
+
 const get_offers_schema = z.object({
   request_id: z.string().length(24),
 });
@@ -80,6 +84,7 @@ module.exports = {
   post_ride_schema,
   accept_ride_schema,
   cancel_ride_schema,
+  complete_ride_schema,
   get_offers_schema,
   add_offer_schema,
   add_counter_offer_schema,

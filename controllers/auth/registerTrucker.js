@@ -28,6 +28,8 @@ const sendSuccessResponse = require("../../utils/success-response");
  *                 type: string
  *               password:
  *                 type: string
+ *               terms_agreed:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: Trucker registered successfully
@@ -54,7 +56,21 @@ const sendSuccessResponse = require("../../utils/success-response");
  */
 const registerTrucker = async (req, res, next) => {
   try {
-    const { user_name, phone, email, password } = req.body;
+    const {
+      user_name,
+      phone,
+      email,
+      password,
+      terms_agreed = true // safely fallback to true if not provided
+    } = req.body;
+
+    // Optional: reject explicitly if terms were denied
+    if (terms_agreed === false) {
+      return res.status(400).json({
+        success: false,
+        message: "You must accept the terms and conditions to register.",
+      });
+    }
 
     const newUser = new User({
       user_name,
@@ -62,7 +78,8 @@ const registerTrucker = async (req, res, next) => {
       email,
       password,
       role: "truck",
-      status: "blocked",
+      status: "active",
+      terms_agreed,
     });
 
     await newUser.save();

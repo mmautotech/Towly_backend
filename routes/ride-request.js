@@ -8,6 +8,7 @@ const {
   post_ride_schema,
   accept_ride_schema,
   cancel_ride_schema,
+  complete_ride_schema,
   get_offers_schema,
   add_offer_schema,
   add_counter_offer_schema,
@@ -18,6 +19,8 @@ const {
   postRideRequest,
   cancelRideRequest,
   acceptRideRequest,
+  completeRideRequest,
+
   getActiveRideRequestsByUser,
   getUnappliedRide_postedRequests,
   getAppliedRide_postedRequests,
@@ -39,6 +42,7 @@ router.patch("/ride-request/add-offer", authenticateToken, validateRequest(add_o
 router.patch("/ride-request/counter-offer", authenticateToken, validateRequest(add_counter_offer_schema), addCounterOfferToRideRequest);
 
 router.patch("/ride-request/accept", authenticateToken, validateRequest(accept_ride_schema), acceptRideRequest);
+router.patch("/ride-request/complete", authenticateToken, validateRequest(complete_ride_schema), completeRideRequest);
 
 router.get("/fetch/ride-requests/active", authenticateToken, getActiveRideRequestsByUser);
 router.get("/ride-requests/new", authenticateToken, getUnappliedRide_postedRequests);

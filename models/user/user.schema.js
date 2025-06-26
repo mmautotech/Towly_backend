@@ -46,7 +46,10 @@ const user_schema = new mongoose.Schema(
       enum: ["active", "blocked", "partial"],
       default: "active",
     },
-
+    terms_agreed:{
+      type:Boolean,
+      default: true
+    },
     // ✅ Role-specific profiles
     client_profile: {
       type: clientProfileSchema,

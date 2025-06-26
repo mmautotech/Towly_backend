@@ -1,63 +1,6 @@
-const mongoose = require("mongoose");
 const { Wallet, Transaction } = require("../../models/finance");
 
-/**
- * @swagger
- * /transaction/{transactionId}/status:
- *   patch:
- *     summary: Admin updates transaction status
- *     tags: [Finance]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: transactionId
- *         required: true
- *         schema:
- *           type: string
- *         description: Transaction ID to update
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [confirmed, cancelled]
- *                 description: New status to assign
- *               note:
- *                 type: string
- *                 description: Optional reason or detail for action
- *     responses:
- *       200:
- *         description: Transaction updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 transaction:
- *                   type: object
- *       400:
- *         description: Transaction already processed or bad request
- *       403:
- *         description: Forbidden, only admin can access
- *       404:
- *         description: Transaction not found
- *       500:
- *         description: Server error while updating transaction
- */
-
 module.exports = async function updateTransactionStatus(req, res) {
-  const session = await mongoose.startSession();
   try {
     if (!req.user || req.user.role !== "admin") {
       return res.status(403).json({
@@ -83,53 +26,42 @@ module.exports = async function updateTransactionStatus(req, res) {
       });
     }
 
-    // Start transaction session early for snapshot safety
-    session.startTransaction();
-
-    // Fetch transaction (within session)
-    const transaction = await Transaction.findById(transactionId).session(
-      session
-    );
+    // Fetch transaction
+    const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
-      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: "Transaction not found",
       });
     }
     if (transaction.status !== "pending") {
-      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Transaction is already processed.",
       });
     }
     if (transaction.type !== "credit") {
-      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Only credit transactions can be updated via this endpoint.",
       });
     }
 
-    const wallet = await Wallet.findById(transaction.wallet_id).session(
-      session
-    );
+    const wallet = await Wallet.findById(transaction.wallet_id);
     if (!wallet) {
-      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: "Associated wallet not found",
       });
     }
 
+    // Update balance and log based on status
     if (status === "confirmed") {
       wallet.balance += transaction.amount;
       wallet.last_transaction = transaction._id;
-      await wallet.save({ session });
+      await wallet.save();
       transaction.balanceAfter = wallet.balance;
-    } else if (status === "cancelled") {
-      // Cancelled: don't change wallet balance
+    } else {
       transaction.balanceAfter = wallet.balance;
     }
 
@@ -144,12 +76,11 @@ module.exports = async function updateTransactionStatus(req, res) {
           : "Transaction confirmed"),
     });
 
-    await transaction.save({ session });
-    await session.commitTransaction();
+    await transaction.save();
 
     const tx = transaction.toObject();
     delete tx.__v;
-    if (tx.log && Array.isArray(tx.log)) {
+    if (Array.isArray(tx.log)) {
       tx.log = tx.log.map(({ action, by, note, at }) => ({
         action,
         by,
@@ -164,13 +95,10 @@ module.exports = async function updateTransactionStatus(req, res) {
       transaction: tx,
     });
   } catch (err) {
-    if (session.inTransaction()) await session.abortTransaction();
     console.error("❌ Transaction update error:", err);
     return res.status(500).json({
       success: false,
       message: "Failed to update transaction",
     });
-  } finally {
-    session.endSession();
   }
 };

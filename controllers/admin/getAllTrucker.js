@@ -55,7 +55,7 @@ const formatUsersWithProfiles = (users) => {
       const truck = user.truck_profile || {};
       const vehicle = truck.vehicle_profile || {};
       const driver = truck.driver_profile || {};
-      const settings = user.settings?.truck_settings || {};
+      const settings = user.settings || {};
 
       return {
         ...baseInfo,
@@ -120,7 +120,7 @@ const projection = {
   "truck_profile.driver_profile.license_front.original.data": 1,
   "truck_profile.driver_profile.license_back.original.data": 1,
   "truck_profile.driver_profile.license_selfie.original.data": 1,
-  "settings.truck_settings": 1,
+  "settings": 1,
 };
 
 const getAllTrucker = async (req, res) => {

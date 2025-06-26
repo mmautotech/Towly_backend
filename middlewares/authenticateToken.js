@@ -1,7 +1,8 @@
-// middlewares/authenticateToken.js
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
+const User = require("../models").User; // Adjust this path if needed
 
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -14,11 +15,16 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    // ✅ Attach both ID and ROLE
-    req.user = {
-      id: decoded.id,
-      role: decoded.role,  // This is crucial for identifying the room
-    };
+    // ✅ Fetch full user from DB
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    req.user = user; // attach the full user document
 
     next();
   } catch (err) {

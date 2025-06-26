@@ -15,6 +15,7 @@ const profile = require("../controllers/profile");
 const { update_client_profile_schema } = require("../validators/client-profile-validator");
 const {update_driver_profile_schema, update_vehicle_profile_schema } = require("../validators/truck-profile-validator");
 
+router.get("/profile_status", authenticateToken, profile.getProfileStatus);
 // =======================
 //       Client Profile
 // =======================

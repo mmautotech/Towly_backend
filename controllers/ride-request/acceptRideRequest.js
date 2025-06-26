@@ -1,133 +1,93 @@
+// controllers/ride-request/acceptRideRequest.js
+
 const mongoose = require("mongoose");
 const { RideRequest, User } = require("../../models");
 const Wallet = require("../../models/finance/wallet.schema");
 const Transaction = require("../../models/finance/transaction.schema");
 const sendSuccessResponse = require("../../utils/success-response");
 
-/**
- * PATCH /ride-request/accept
- * Accept a ride request, process commission transfer, and notify the truck driver.
- * All financial/database changes are atomic.
- */
 const acceptRideRequest = async (req, res, next) => {
-  // Start a MongoDB session for transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const userId = req.user.id; // Client who is accepting the offer
-    const { request_id, offer_id } = req.body;
+    const clientId = req.user.id;
+    const { request_id: requestId, offer_id: offerId } = req.body;
 
-    // 1. Input Validation
-    if (!request_id || !offer_id) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Both request_id and offer_id are required.",
-      });
+    if (!requestId || !offerId) {
+      return res.status(400).json({ success: false, message: "Both request_id and offer_id are required." });
     }
+
     if (
-      !mongoose.Types.ObjectId.isValid(request_id) ||
-      !mongoose.Types.ObjectId.isValid(offer_id)
+      !mongoose.Types.ObjectId.isValid(requestId) ||
+      !mongoose.Types.ObjectId.isValid(offerId)
     ) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Invalid request_id or offer_id format.",
-      });
+      return res.status(400).json({ success: false, message: "Invalid request_id or offer_id format." });
     }
 
-    // 2. Atomically update the RideRequest (only if status is 'posted' and offer exists)
-    const updated = await RideRequest.findOneAndUpdate(
+    // Step 1: Find and update the ride request
+    const ride = await RideRequest.findOneAndUpdate(
       {
-        _id: request_id,
-        user_id: userId,
+        _id: requestId,
+        user_id: clientId,
         status: "posted",
-        "offers._id": offer_id,
+        "offers._id": offerId
       },
       {
         status: "accepted",
-        accepted_offer: offer_id,
+        accepted_offer: offerId
       },
-      { new: true, session }
+      { new: true }
     );
-    if (!updated) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Ride request not found, not posted, or invalid offer.",
-      });
+
+    if (!ride) {
+      return res.status(404).json({ success: false, message: "Ride request not found, not posted, or invalid offer." });
     }
 
-    // 3. Find the accepted offer subdocument
-    const acceptedOffer = updated.offers.id(offer_id);
+    const acceptedOffer = ride.offers.id(offerId);
     if (!acceptedOffer) {
-      await session.abortTransaction();
-      return res.status(500).json({
-        success: false,
-        message: "Accepted offer not found in ride request.",
-      });
+      return res.status(500).json({ success: false, message: "Accepted offer not found in ride request." });
     }
 
-    // 4. Retrieve trucker's wallet
-    const truckerWallet = await Wallet.findOne({ user_id: acceptedOffer.truck_id }).session(session);
+    // Step 2: Get trucker and admin wallets
+    const truckerWallet = await Wallet.findOne({ user_id: acceptedOffer.truck_id });
     if (!truckerWallet) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Trucker's wallet not found.",
-      });
+      return res.status(404).json({ success: false, message: "Trucker's wallet not found." });
     }
 
-    // 5. Retrieve commission wallet (admin admin)
-    const commissionUser = await User.findOne({ user_name: "admin", role: "admin" }).session(session);
-    if (!commissionUser) {
-      await session.abortTransaction();
-      return res.status(500).json({
-        success: false,
-        message: "Commission admin user not found.",
-      });
+    const commissionAdmin = await User.findOne({ user_name: "Admin", role: "admin" });
+    if (!commissionAdmin) {
+      return res.status(500).json({ success: false, message: "Commission-admin user not found." });
     }
-    const commissionWallet = await Wallet.findOne({ user_id: commissionUser._id }).session(session);
+
+    const commissionWallet = await Wallet.findOne({ user_id: commissionAdmin._id });
     if (!commissionWallet) {
-      await session.abortTransaction();
-      return res.status(500).json({
-        success: false,
-        message: "Commission wallet not found.",
-      });
+      return res.status(500).json({ success: false, message: "Commission wallet not found." });
     }
 
-    // 6. Calculate 10% commission
-    const commissionAmount = Math.round(acceptedOffer.offered_price * 0.10 * 100) / 100;
-
-    // 7. Check if trucker has enough balance
+    // Step 3: Check balance
+    const commissionAmount = Math.round(acceptedOffer.offered_price * 0.1 * 100) / 100;
     if (truckerWallet.balance < commissionAmount) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Trucker does not have enough balance to pay commission.",
-      });
+      return res.status(400).json({ success: false, message: "Trucker does not have enough balance to pay commission." });
     }
 
-    // 8. Deduct commission from trucker, add to commission wallet
+    // Step 4: Deduct and update
     truckerWallet.balance -= commissionAmount;
     commissionWallet.balance += commissionAmount;
-    await truckerWallet.save({ session });
-    await commissionWallet.save({ session });
+    await truckerWallet.save();
+    await commissionWallet.save();
 
-    // 9. Record both transactions (fix: add ordered: true)
+    // Step 5: Log transactions
     await Transaction.create([
       {
         user_id: truckerWallet.user_id,
         wallet_id: truckerWallet._id,
         type: "debit",
         amount: commissionAmount,
-        ride_request_id: updated._id,
+        ride_request_id: ride._id,
         status: "confirmed",
         remarks: "Commission for ride offer acceptance",
         balanceAfter: truckerWallet.balance,
         log: [{
           action: "confirmed",
-          by: userId,
+          by: clientId,
           note: "Commission charged on offer acceptance"
         }]
       },
@@ -141,54 +101,44 @@ const acceptRideRequest = async (req, res, next) => {
         balanceAfter: commissionWallet.balance,
         log: [{
           action: "confirmed",
-          by: userId,
+          by: clientId,
           note: `Commission from trucker ${acceptedOffer.truck_id}`
         }]
       }
-    ], { session, ordered: true }); // <--- FIXED!
+    ]);
 
-
-    // 10. Commit all changes atomically
-    await session.commitTransaction();
-    session.endSession();
-
-    // 11. (Post-commit) Notify truck driver via socket.io (side-effect, not atomic)
-    const clientUser = await User.findById(updated.user_id).select("user_name");
+    // Step 6: Notify truck via socket
+    const clientUser = await User.findById(ride.user_id).select("user_name");
     const io = req.app.get("io");
     if (io) {
-      const truckRoom = `truck_${acceptedOffer.truck_id.toString()}`;
       const payload = {
-        request_id: updated._id.toString(),
-        offer_id,
-        client_id: updated.user_id.toString(),
-        client_name: clientUser?.user_name || "Client",
+        request_id: ride._id.toString(),
+        offer_id: ride.accepted_offer.toString(),
+        client_id: ride.user_id.toString(),
+        client_name: clientUser?.user_name ?? "Client",
         offered_price: acceptedOffer.offered_price,
         origin: {
-          latitude: updated.origin_location.coordinates[1],
-          longitude: updated.origin_location.coordinates[0],
+          latitude: ride.origin_location.coordinates[1],
+          longitude: ride.origin_location.coordinates[0],
         },
         destination: {
-          latitude: updated.dest_location.coordinates[1],
-          longitude: updated.dest_location.coordinates[0],
-        },
+          latitude: ride.dest_location.coordinates[1],
+          longitude: ride.dest_location.coordinates[0],
+        }
       };
-
-      console.log("🔔 Emitting 'offerAccepted' to:", truckRoom);
+      const truckRoom = `truck_${acceptedOffer.truck_id}`;
       io.to(truckRoom).emit("offerAccepted", payload);
-    } else {
-      console.warn("⚠️ Socket.IO instance not available on req.app");
+      console.log("🔔 Emitted 'offerAccepted' to:", truckRoom);
     }
 
-    // 12. Respond to client with success and details
+    // Step 7: Final response
     return sendSuccessResponse(res, "Offer accepted successfully", {
-      request_id: updated._id.toString(),
-      offer_id,
+      request_id: ride._id.toString(),
+      offer_id: ride.accepted_offer.toString(),
     });
 
   } catch (err) {
-    // Rollback transaction on any error
-    try { await session.abortTransaction(); session.endSession(); } catch (e) {}
-    console.error("❌ acceptRideRequest error:", err.message);
+    console.error("❌ acceptRideRequest error:", err);
     next(err);
   }
 };

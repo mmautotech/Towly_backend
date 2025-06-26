@@ -25,17 +25,6 @@ const { Wallet } = require("../../models/finance");
  *                   description: ObjectId of the last transaction
  *                 message:
  *                   type: string
- *       404:
- *         description: Wallet not found for user
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
  *       500:
  *         description: Failed to fetch wallet
  *         content:
@@ -48,24 +37,23 @@ const { Wallet } = require("../../models/finance");
  *                 message:
  *                   type: string
  */
-
 module.exports = async function getWalletBalanceByUser(req, res) {
   try {
-    // Only fetch wallet belonging to authenticated user
-    const wallet = await Wallet.findOne({ user_id: req.user.id }).lean();
+    // Try to find an existing wallet document
+    let wallet = await Wallet.findOne({ user_id: req.user.id }).lean();
+
+    // If no wallet exists, create one (letting schema defaults apply)
     if (!wallet) {
-      return res.status(404).json({
-        success: false,
-        message: "Wallet not found for this user.",
-      });
+      const created = await Wallet.create({ user_id: req.user.id });
+      // use .toObject() so we can destructure
+      wallet = created.toObject();
     }
 
-    // Respond with only the needed fields for security & clarity
     return res.status(200).json({
       success: true,
-      balance: wallet.balance || 0,
-      message: "Wallet balance retrieved successfully",
+      balance: wallet.balance,
       last_transaction: wallet.last_transaction || null,
+      message: "Wallet balance retrieved successfully",
     });
   } catch (err) {
     console.error("Failed to fetch wallet balance:", err);

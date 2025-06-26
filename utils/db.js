@@ -1,21 +1,20 @@
 const mongoose = require("mongoose");
 const { RideRequest } = require("../models");
-// Connect to MongoDB Atlas
+
 const connectDb = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      tls: true, // Enforce TLS for secure connection
-      serverSelectionTimeoutMS: 15000, // Timeout after 15 seconds
-      socketTimeoutMS: 45000, // Increase socket timeout
-      family: 4, // Force IPv4
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      family: 4, // IPv4
+      serverSelectionTimeoutMS: 10000,
     });
 
-    // 🔄 Ensure all indexes are created
     await RideRequest.syncIndexes();
-    console.log("✅ Database connection successful");
+    console.log("✅ Connected to Local MongoDB");
   } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
-    process.exit(1); // Stop the server if DB fails
+    console.error("❌ Local DB connection failed:", error.message);
+    process.exit(1);
   }
 };
 
