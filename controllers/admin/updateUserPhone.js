@@ -2,9 +2,9 @@ const { User } = require('../../models');
 
 /**
  * @swagger
- * /update-phone/{userId}:
+ * /update-contact/{userId}:
  *   put:
- *     summary: Update user's phone number
+ *     summary: Update user's phone number or email
  *     tags:
  *       - Admin
  *     security:
@@ -25,11 +25,13 @@ const { User } = require('../../models');
  *             properties:
  *               phone:
  *                 type: string
+ *               email:
+ *                 type: string
  *     responses:
  *       200:
- *         description: Phone number updated successfully
+ *         description: Contact information updated successfully
  *       400:
- *         description: Phone already in use or invalid
+ *         description: Email or phone already in use or invalid
  *       403:
  *         description: Forbidden, only admin can access
  *       404:
@@ -38,7 +40,6 @@ const { User } = require('../../models');
  *         description: Server error
  */
 const updateUserPhone = async (req, res) => {
-  // Defensive: Confirm current user is admin
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -47,22 +48,32 @@ const updateUserPhone = async (req, res) => {
   }
 
   const { userId } = req.params;
-  const { phone } = req.body;
+  const { phone, email } = req.body;
 
-  if (!phone) {
+  if (!phone && !email) {
     return res.status(400).json({
       success: false,
-      message: 'Phone number is required'
+      message: 'At least one field (phone or email) is required'
     });
   }
 
   try {
-    const existingUser = await User.findOne({ phone, _id: { $ne: userId } });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number already exists for another user'
-      });
+    // Check for existing phone or email (excluding current user)
+    const conflictQuery = {
+      $or: [],
+      _id: { $ne: userId }
+    };
+    if (phone) conflictQuery.$or.push({ phone });
+    if (email) conflictQuery.$or.push({ email });
+
+    if (conflictQuery.$or.length) {
+      const conflict = await User.findOne(conflictQuery);
+      if (conflict) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone or email already in use by another user'
+        });
+      }
     }
 
     const user = await User.findById(userId);
@@ -73,19 +84,22 @@ const updateUserPhone = async (req, res) => {
       });
     }
 
-    user.phone = phone;
+    if (phone) user.phone = phone;
+    if (email) user.email = email;
+
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Phone number updated successfully.',
+      message: 'Contact information updated successfully.',
       user: {
         id: user._id,
         phone: user.phone,
+        email: user.email,
       },
     });
   } catch (error) {
-    console.error('Admin Phone Update Error:', error);
+    console.error('Admin Contact Update Error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'

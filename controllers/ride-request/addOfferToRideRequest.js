@@ -34,7 +34,7 @@ const addOfferToRideRequest = async (req, res, next) => {
     if (!truckWallet) {
       return res.status(404).json({
         success: false,
-        message: "Truck wallet Empty.",
+        message: "Wallet balance insufficient.",
       });
     }
 

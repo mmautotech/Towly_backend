@@ -76,7 +76,6 @@ io.on('connection', (socket) => {
   console.log(`✅ Socket connected: ${socket.id}`);
   console.log('🛏 Joined rooms:', [...socket.rooms]);
 
-  // 🔁 Join shared chat room dynamically
   socket.on('join-chat', ({ user1, user2 }) => {
     if (!user1 || !user2) return;
     const chatRoom = `chat_${[user1, user2].sort().join('_')}`;
@@ -84,11 +83,15 @@ io.on('connection', (socket) => {
     console.log(`📥 ${socket.user.id} joined chat room: ${chatRoom}`);
   });
 
+  socket.on('join', room => {
+    socket.join(room);
+    console.log(`✅ Socket joined room: ${room}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
   });
 });
-
 
 // ─── Make Socket Instance Available ──────────────────────────────────────
 app.set('io', io);

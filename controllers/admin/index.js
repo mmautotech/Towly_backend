@@ -9,6 +9,9 @@ module.exports = {
   getWallets: require("../admin/getWallets"),
   getTransactions: require("../admin/getTransactions"),
 
+  getConversation: require("./getMessages" ),
+ 
+
   // Update user Phone or status
   updateUserPhone: require("./updateUserPhone"),
   updateUserStatus: require("./updateUserStatus"),

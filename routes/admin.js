@@ -12,6 +12,8 @@ router.get("/ride-requests/getAll", authenticateToken, isAdmin, admin.getAllRide
 router.get("/wallets", authenticateToken, isAdmin, admin.getWallets);
 router.get("/transactions", authenticateToken, isAdmin, admin.getTransactions);
 
+
+
 // Admin Routes
 router.put("/update-phone/:userId", authenticateToken, isAdmin, admin.updateUserPhone);
 router.patch("/update-status/:userId", authenticateToken, isAdmin, admin.updateUserStatus);

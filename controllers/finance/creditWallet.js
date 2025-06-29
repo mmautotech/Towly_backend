@@ -11,10 +11,10 @@ async function getOrCreateWallet(userId) {
 
 module.exports = async function creditWallet(req, res) {
   try {
-    const { amount, proof_details, proof_image_url, remarks } = req.body;
+    const { amount, proof_details, remarks } = req.body;
     const userId = req.user.id;
 
-    // Validation
+    // Validate amount
     if (
       amount === undefined ||
       amount === null ||
@@ -34,27 +34,18 @@ module.exports = async function creditWallet(req, res) {
       });
     }
 
-    const hasProofDetails = proof_details && proof_details.trim() !== "";
-    const hasProofImageUrl = proof_image_url && proof_image_url.trim() !== "";
-
-    if (!hasProofDetails && !hasProofImageUrl) {
+    // Validate proof details only
+    if (!proof_details || proof_details.trim() === "") {
       return res.status(400).json({
         success: false,
-        message: "Proof details or proof image is required.",
+        message: "Proof details are required.",
       });
     }
 
-    if (hasProofDetails && proof_details.length > 255) {
+    if (proof_details.length > 255) {
       return res.status(400).json({
         success: false,
         message: "Proof details too long (max 255 chars)",
-      });
-    }
-
-    if (hasProofImageUrl && proof_image_url.length > 512) {
-      return res.status(400).json({
-        success: false,
-        message: "Proof image URL too long (max 512 chars)",
       });
     }
 
@@ -65,18 +56,17 @@ module.exports = async function creditWallet(req, res) {
       });
     }
 
-    // Find or create wallet for user
+    // Get or create wallet
     const wallet = await getOrCreateWallet(userId);
 
-    // Create transaction (status: pending)
+    // Create new pending transaction
     const transaction = await Transaction.create({
       user_id: userId,
       wallet_id: wallet._id,
       type: "credit",
       amount: Number(amount),
-      proof_details: hasProofDetails ? proof_details : null,
-      proof_image_url: hasProofImageUrl ? proof_image_url : null,
-      remarks: remarks || null,
+      proof_details: proof_details.trim(),
+      remarks: remarks?.trim() || null,
       log: [
         {
           action: "created",
@@ -85,10 +75,10 @@ module.exports = async function creditWallet(req, res) {
         },
       ],
       status: "pending",
-      balanceAfter: wallet.balance, // Not applied yet
+      balanceAfter: wallet.balance, // No credit added yet
     });
 
-    // Update wallet last_transaction field
+    // Update wallet with last transaction reference
     await Wallet.updateOne(
       { _id: wallet._id },
       { last_transaction: transaction._id }

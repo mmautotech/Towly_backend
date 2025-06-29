@@ -5,7 +5,7 @@ const authenticateToken = require("../middlewares/authenticateToken");
 // ✅ Unified modular user controller
 const user = require("../controllers/user-info");
 
-router.get("/basic", authenticateToken, user.getBasicInfo);
+router.post("/basic", authenticateToken, user.getBasicInfo);
 router.post("/target/update-rating", authenticateToken, user.UpdateRating);
 router.post("/update-location", authenticateToken, user.UpdateLocationVehicle);
 

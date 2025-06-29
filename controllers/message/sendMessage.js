@@ -6,46 +6,8 @@ const generateChatRoom = (id1, id2) => {
 };
 
 /**
- * @swagger
- * /api/message/send:
- *   post:
- *     summary: Send a message from any authenticated user to another user
- *     tags:
- *       - Messaging
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - receiverId
- *               - message
- *             properties:
- *               receiverId:
- *                 type: string
- *                 description: ID of the user receiving the message
- *               message:
- *                 type: string
- *                 description: The content of the message
- *     responses:
- *       200:
- *         description: Message successfully sent
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   $ref: '#/components/schemas/Message'
- *       400:
- *         description: Missing required fields
- *       500:
- *         description: Server error
+ * POST /api/message/send
  */
-
 exports.sendMessage = async (req, res) => {
   try {
     const io = req.app.get('io');
@@ -56,7 +18,7 @@ exports.sendMessage = async (req, res) => {
       return res.status(400).json({ error: 'receiverId and message are required' });
     }
 
-    // 1. Create message with status "sent"
+    // 1. Save the message with status "sent"
     const savedMessage = await Message.create({
       senderId,
       receiverId,
@@ -65,16 +27,41 @@ exports.sendMessage = async (req, res) => {
       timestamp: new Date(),
     });
 
-    // 2. Emit to shared chat room
     const chatRoom = generateChatRoom(senderId, receiverId);
+
+    // 2. Emit message to the chat room
     io.to(chatRoom).emit('message-received', savedMessage);
     console.log(`📢 Emitted message to room: ${chatRoom}`);
 
-    // 3. Update the message to "delivered" after emitting
+    // 3. Update the status to "delivered"
     savedMessage.status = 'delivered';
     await savedMessage.save();
 
-    return res.status(200).json({ data: savedMessage });
+    // 4. Count unread messages from sender to receiver
+    const unreadCount = await Message.countDocuments({
+      receiverId,
+      senderId,
+      status: { $ne: 'read' },
+    });
+
+    // 5. Emit unread count update to receiver
+    const notificationPayload = {
+      receiverId,
+      senderId,
+      senderName: req.user.user_name,
+      message,
+      timestamp: savedMessage.timestamp,
+      count: unreadCount,
+    };
+
+    console.log('📨 Emitting message:received payload to user_' + receiverId, notificationPayload);
+
+    io.to(`user_${receiverId}`).emit('message:received', notificationPayload);
+
+    return res.status(200).json({
+      data: savedMessage,
+      unreadCount,
+    });
   } catch (err) {
     console.error('❌ sendMessage error:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
