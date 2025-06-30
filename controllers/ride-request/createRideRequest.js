@@ -28,7 +28,7 @@ const createRideRequest = async (req, res, next) => {
     const vehicle = { ...req.body.vehicle_details };
     vehicle.vehicle_category ??= "donot-apply";
     vehicle.loaded           ??= "donot-apply";
-    vehicle.wheels_category  ??= "rolling";
+    vehicle.wheels_category  ??= "Rolling";
 
     // Build the document payload
     // Mongoose will cast the string ID into ObjectId automatically

@@ -17,6 +17,14 @@ exports.sendMessage = async (req, res) => {
     if (!receiverId || !message) {
       return res.status(400).json({ error: 'receiverId and message are required' });
     }
+    await Message.updateMany(
+      {
+        senderId: receiverId,
+        receiverId: senderId,
+        status: { $ne: 'read' },
+      },
+      { $set: { status: 'read' } }
+    )
 
     // 1. Save the message with status "sent"
     const savedMessage = await Message.create({

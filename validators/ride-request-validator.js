@@ -18,11 +18,11 @@ const ride_request_schema = z.object({
     make: z.string(),
     model: z.string(),
     year_of_manufacture: z.number(),
-    wheels_category: z.enum(["rolling", "stationary"]).default("rolling"),
+    wheels_category: z.enum(["Wheels Are Rolling", "Wheels Are Not Rolling"]).default("Wheels Are Rolling"),
     vehicle_category: z
-      .enum(["donot-apply", "swb", "mwb", "lwb"])
+      .enum(["donot-apply", "Short Wheel Base", "Medium Wheel Base", "Long Wheel Base"])
       .default("donot-apply"),
-    loaded: z.enum(["donot-apply", "loaded"]).default("donot-apply"),
+    loaded: z.enum(["UnLoaded", "Loaded"]).default("donot-apply"),
   }),
   status: z
     .enum([
