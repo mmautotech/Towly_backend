@@ -27,7 +27,7 @@ const createRideRequest = async (req, res, next) => {
     // Default any missing vehicle fields
     const vehicle = { ...req.body.vehicle_details };
     vehicle.vehicle_category ??= "donot-apply";
-    vehicle.loaded           ??= "donot-apply";
+    vehicle.loaded           ??= "UnLoaded";
     vehicle.wheels_category  ??= "Rolling";
 
     // Build the document payload

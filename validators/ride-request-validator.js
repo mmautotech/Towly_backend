@@ -22,7 +22,7 @@ const ride_request_schema = z.object({
     vehicle_category: z
       .enum(["donot-apply", "Short Wheel Base", "Medium Wheel Base", "Long Wheel Base"])
       .default("donot-apply"),
-    loaded: z.enum(["UnLoaded", "Loaded"]).default("donot-apply"),
+    loaded: z.enum(["UnLoaded", "Loaded"]).default("UnLoaded"),
   }),
   status: z
     .enum([
