@@ -8,7 +8,7 @@ const vehicleSchema = new mongoose.Schema(
     year_of_manufacture: Number,
     wheels_category: {
       type: String,
-      default: "Rolling",
+      default: "Wheels Are Rolling",
     },
     vehicle_category: {
       type: String,
@@ -16,7 +16,7 @@ const vehicleSchema = new mongoose.Schema(
     },
     loaded: {
       type: String,
-      default: "UnLoaded",
+      default: "Unloaded",
     },
   },
   { _id: false }

@@ -27,8 +27,9 @@ const createRideRequest = async (req, res, next) => {
     // Default any missing vehicle fields
     const vehicle = { ...req.body.vehicle_details };
     vehicle.vehicle_category ??= "donot-apply";
-    vehicle.loaded           ??= "UnLoaded";
-    vehicle.wheels_category  ??= "Rolling";
+    vehicle.loaded           ??= "Unloaded";
+    // check
+    vehicle.wheels_category  ??= "Wheels Are Rolling";
 
     // Build the document payload
     // Mongoose will cast the string ID into ObjectId automatically
