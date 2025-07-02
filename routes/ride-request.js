@@ -42,7 +42,7 @@ router.patch("/ride-request/add-offer", authenticateToken, validateRequest(add_o
 router.patch("/ride-request/counter-offer", authenticateToken, validateRequest(add_counter_offer_schema), addCounterOfferToRideRequest);
 
 router.patch("/ride-request/accept", authenticateToken, validateRequest(accept_ride_schema), acceptRideRequest);
-router.patch("/ride-request/complete", authenticateToken, validateRequest(complete_ride_schema), completeRideRequest);
+router.post("/ride-request/complete", authenticateToken, validateRequest(complete_ride_schema), completeRideRequest);
 
 router.get("/fetch/ride-requests/active", authenticateToken, getActiveRideRequestsByUser);
 router.get("/ride-requests/new", authenticateToken, getUnappliedRide_postedRequests);

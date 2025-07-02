@@ -1,6 +1,6 @@
 // controllers/ride-request/addCounterOfferToRideRequest.js
-const mongoose            = require("mongoose");
-const { RideRequest }     = require("../../models");
+const mongoose = require("mongoose");
+const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
 /**
@@ -43,7 +43,7 @@ async function addCounterOfferToRideRequest(req, res, next) {
     const clientId = req.user.id;
     const { offer_id, client_counter_price } = req.body;
 
-    // 1) required fields
+    // 1) Required fields
     if (!offer_id || client_counter_price == null) {
       return res.status(400).json({
         success: false,
@@ -51,7 +51,7 @@ async function addCounterOfferToRideRequest(req, res, next) {
       });
     }
 
-    // 2) validate ObjectId formats
+    // 2) Validate ObjectId formats
     if (
       !mongoose.Types.ObjectId.isValid(offer_id) ||
       !mongoose.Types.ObjectId.isValid(clientId)
@@ -62,12 +62,13 @@ async function addCounterOfferToRideRequest(req, res, next) {
       });
     }
 
-    // 3) update only if the ride belongs to this client and is still posted
+    // 3) Update only if the ride belongs to this client and is still posted
     const result = await RideRequest.updateOne(
       {
         user_id: new mongoose.Types.ObjectId(clientId),
         status: "posted",
         "offers._id": new mongoose.Types.ObjectId(offer_id),
+        "offers.available": true,
       },
       {
         $set: {
@@ -77,13 +78,13 @@ async function addCounterOfferToRideRequest(req, res, next) {
     );
 
     if (result.modifiedCount === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: "No matching posted ride or offer found to update.",
+        message: "Unable to submit counter offer. The ride may be closed or the truck may no longer be available.",
       });
     }
 
-    // 4) success
+    // 4) Success
     return sendSuccessResponse(res, "Counter offer submitted successfully.");
   } catch (error) {
     next(error);

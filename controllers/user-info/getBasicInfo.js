@@ -6,7 +6,6 @@ const getBasicInfo = async (req, res, next) => {
   try {
     
     const userId = req.body?.user_id || req.user.id;
-    console.log(userId)
     const user = await User.findById(userId);
 
     if (!user) {

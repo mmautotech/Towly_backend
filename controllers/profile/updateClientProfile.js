@@ -86,8 +86,6 @@ const { formatBase64Image } = require("../../utils/profile-helper");
  *         description: User not found.
  */
 async function updateClientProfile(req, res, next) {
-  // console.log("REQ.BODY:", req.body);
-  // console.log("REQ.FILE:", req.file);
   try {
     // Only allow clients to update
     if (req.user.role !== "client") {

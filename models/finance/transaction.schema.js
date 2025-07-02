@@ -14,7 +14,9 @@ const transactionSchema = new mongoose.Schema(
     ride_request_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "RideRequest",
-      required: function () { return this.type === "debit"; }
+      required: function () {
+        return this.type === "debit" && this.remarks?.includes("commission");
+      }
     },
     status: { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" },
     remarks: { type: String, maxlength: 255 },

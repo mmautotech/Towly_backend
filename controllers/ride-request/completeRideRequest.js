@@ -3,51 +3,75 @@ const { RideRequest } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
 
 const completeRideRequest = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const truckId = req.user.id; // logged-in truck user
+    const truckId = req.user.id;
     const { request_id: requestId } = req.body;
- 
-    // Validate request_id
+
+    // Validate request ID
     if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
       return res.status(400).json({ success: false, message: "Valid request_id is required." });
     }
 
-   // Find the ride and check ownership
-    const ride = await RideRequest.findById(requestId);
-
+    // Find ride within transaction
+    const ride = await RideRequest.findById(requestId).session(session);
     if (!ride || ride.status !== "accepted") {
       return res.status(404).json({ success: false, message: "Ride not found or not in accepted status." });
     }
 
-    // Check if the accepted offer belongs to this truck
+    // Check offer belongs to this truck
     const acceptedOffer = ride.offers.id(ride.accepted_offer);
-
     if (!acceptedOffer || acceptedOffer.truck_id.toString() !== truckId) {
       return res.status(403).json({ success: false, message: "You are not authorized to complete this ride." });
     }
 
-    // Mark ride as completed
+    // 1. Mark this ride as completed
     ride.status = "completed";
-    await ride.save();
+    ride.completedAt = new Date();
+    await ride.save({ session });
 
-    // Emit to client
+    // 2. Re-enable truck's other offers on posted rides
+    await RideRequest.updateMany(
+      {
+        _id: { $ne: ride._id },
+        "offers.truck_id": truckId,
+        "offers.available": false,
+        status: "posted"
+      },
+      {
+        $set: { "offers.$[elem].available": true }
+      },
+      {
+        arrayFilters: [{ "elem.truck_id": truckId }],
+        session
+      }
+    );
+
+    // 3. Emit socket to client
     const io = req.app.get("io");
     if (io) {
       const clientRoom = `client_${ride.user_id.toString()}`;
       const payload = {
         request_id: ride._id.toString(),
-        message: "Your ride has been marked as completed by the truck."
+        message: "Your ride has been marked as completed by the truck.",
       };
       io.to(clientRoom).emit("rideCompleted", payload);
       console.log("🔔 Emitted 'rideCompleted' to:", clientRoom);
     }
 
+    await session.commitTransaction();
+    session.endSession();
+
     return sendSuccessResponse(res, "Ride marked as completed successfully.", {
-      request_id: ride._id.toString(),
+      ride_id: ride._id.toString(),
       status: ride.status,
     });
 
   } catch (err) {
+    await session.abortTransaction().catch(() => {});
+    session.endSession();
     console.error("❌ completeRideRequest error:", err);
     next(err);
   }

@@ -1,3 +1,5 @@
+// models/ride-Request/offerSchema.js
+
 const mongoose = require("mongoose");
 
 const offerSchema = new mongoose.Schema(
@@ -24,6 +26,11 @@ const offerSchema = new mongoose.Schema(
     client_counter_price: {
       type: Number,
     },
+    available: {
+      type: Boolean,
+      default: true,
+    }
+
   },
   { timestamps: true }
 );

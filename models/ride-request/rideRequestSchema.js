@@ -1,4 +1,4 @@
-// rideRequestSchema.js
+// models/ride-Request/rideRequestSchema.js
 
 const mongoose = require("mongoose");
 const geoPointSchema = require("../user/geoPoint.schema");

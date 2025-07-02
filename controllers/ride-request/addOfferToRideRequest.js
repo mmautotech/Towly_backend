@@ -30,16 +30,10 @@ const addOfferToRideRequest = async (req, res, next) => {
     }
 
     // ✅ Step 1: Check wallet balance
-    const truckWallet = await Wallet.findOne({ user_id: truckId });
-    if (!truckWallet) {
-      return res.status(404).json({
-        success: false,
-        message: "Wallet balance insufficient.",
-      });
-    }
-
+    offered_price = parseFloat(offered_price?.toString()?.trim());
     const requiredCommission = Math.round(offered_price * 0.10 * 100) / 100;
-    if (truckWallet.balance < requiredCommission) {
+    const truckWallet = await Wallet.findOne({ user_id: truckId });
+    if (!truckWallet || truckWallet.balance < requiredCommission) {
       return res.status(400).json({
         success: false,
         message: `Insufficient balance. You need at least £${requiredCommission.toFixed(2)} to make this offer.`,
@@ -62,6 +56,7 @@ const addOfferToRideRequest = async (req, res, next) => {
         $set: {
           "offers.$.offered_price": offered_price,
           "offers.$.time_to_reach": time_to_reach,
+          "offers.$.available": true,
         },
       }
     );
@@ -76,6 +71,7 @@ const addOfferToRideRequest = async (req, res, next) => {
               truck_id: truckUserObjectId,
               offered_price,
               time_to_reach,
+              available: true,
             },
           },
         }
