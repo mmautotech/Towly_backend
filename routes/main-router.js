@@ -13,7 +13,10 @@ router.use("/profile", require("./profile"));
 router.use("/user", require("./user"));
 router.use("/wallet", require("./finance"));
 
-router.use("/", require("./ride-request"));
+router.use("/ride-request", require("./ride-request"));
+router.use("/ride-requests", require("./ride-requests"));
+
+router.use("/notifications", require("./notification"));
 
 router.use("/", require("./message.js"));
 

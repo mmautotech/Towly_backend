@@ -4,10 +4,9 @@ const { RideRequest } = require("../models");
 const connectDb = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      family: 4, // IPv4
+      family: 4, // IPv4 (keep if you need IPv4-only)
       serverSelectionTimeoutMS: 10000,
+      // You can add more options if needed, but don't include deprecated ones
     });
 
     await RideRequest.syncIndexes();

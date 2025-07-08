@@ -1,4 +1,3 @@
-// models/finance/log-entry.schema.js
 const mongoose = require("mongoose");
 
 const logEntrySchema = new mongoose.Schema(
@@ -7,14 +6,16 @@ const logEntrySchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: [
-        "created",    // When user submits transaction
-        "confirmed",  // When admin confirms/approves
-        "cancelled",  // When admin/user cancels
+        "created", // When user submits transaction
+        "confirmed", // When admin confirms/approves or on auto-confirm
+        "cancelled", // When admin/user cancels
+        "reversal", // <-- Added: For commission reversal (reopen/cancel after accept)
+        "cancel_refund", // <-- Added: For explicit cancel refund (if used)
       ],
     },
     by: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // user/admin who performed the action
+      ref: "User",
       required: true,
     },
     at: {
@@ -25,7 +26,7 @@ const logEntrySchema = new mongoose.Schema(
     note: {
       type: String,
       maxlength: 255,
-    }, // optional: e.g. "Insufficient proof", "Payment received"
+    },
   },
   { _id: false }
 );

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
-const { RideRequest } = require("../../models");
+const { RideRequest, User } = require("../../models"); // <-- Make sure User is imported!
 const sendSuccessResponse = require("../../utils/success-response");
+const Notification = require("../../models/notification");
 
 const completeRideRequest = async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -12,20 +13,35 @@ const completeRideRequest = async (req, res, next) => {
 
     // Validate request ID
     if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
-      return res.status(400).json({ success: false, message: "Valid request_id is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Valid request_id is required." });
     }
 
     // Find ride within transaction
     const ride = await RideRequest.findById(requestId).session(session);
     if (!ride || ride.status !== "accepted") {
-      return res.status(404).json({ success: false, message: "Ride not found or not in accepted status." });
+      return res.status(404).json({
+        success: false,
+        message: "Ride not found or not in accepted status.",
+      });
     }
 
     // Check offer belongs to this truck
     const acceptedOffer = ride.offers.id(ride.accepted_offer);
     if (!acceptedOffer || acceptedOffer.truck_id.toString() !== truckId) {
-      return res.status(403).json({ success: false, message: "You are not authorized to complete this ride." });
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to complete this ride.",
+      });
     }
+
+    // --- Get trucker's username/email ---
+    let truckUserName = "Your driver";
+    try {
+      const truckUser = await User.findById(truckId).session(session);
+      if (truckUser && truckUser.user_name) truckUserName = truckUser.user_name;
+    } catch (e) {}
 
     // 1. Mark this ride as completed
     ride.status = "completed";
@@ -38,27 +54,38 @@ const completeRideRequest = async (req, res, next) => {
         _id: { $ne: ride._id },
         "offers.truck_id": truckId,
         "offers.available": false,
-        status: "posted"
+        status: "posted",
       },
       {
-        $set: { "offers.$[elem].available": true }
+        $set: { "offers.$[elem].available": true },
       },
       {
         arrayFilters: [{ "elem.truck_id": truckId }],
-        session
+        session,
       }
     );
 
-    // 3. Emit socket to client
+    // 3. Save notification for the client
+    await Notification.create(
+      [
+        {
+          user_id: ride.user_id,
+          type: "rideCompleted",
+          ride_id: ride._id,
+          message: `Your ride has been marked as completed by the truck (${truckUserName}).`,
+          read: false,
+          createdAt: new Date(),
+        },
+      ],
+      { session }
+    );
+
+    // 4. Emit socket event to client (reloadNotifications only)
     const io = req.app.get("io");
     if (io) {
       const clientRoom = `client_${ride.user_id.toString()}`;
-      const payload = {
-        request_id: ride._id.toString(),
-        message: "Your ride has been marked as completed by the truck.",
-      };
-      io.to(clientRoom).emit("rideCompleted", payload);
-      console.log("🔔 Emitted 'rideCompleted' to:", clientRoom);
+      io.to(clientRoom).emit("reloadNotifications", { reload: true });
+      console.log("🔔 Emitted 'reloadNotifications' to:", clientRoom);
     }
 
     await session.commitTransaction();
@@ -68,7 +95,6 @@ const completeRideRequest = async (req, res, next) => {
       ride_id: ride._id.toString(),
       status: ride.status,
     });
-
   } catch (err) {
     await session.abortTransaction().catch(() => {});
     session.endSession();

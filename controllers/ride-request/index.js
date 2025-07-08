@@ -4,6 +4,7 @@ const postRideRequest = require("./postRideRequest");
 const cancelRideRequest = require("./cancelRideRequest");
 const acceptRideRequest = require("./acceptRideRequest");
 const completeRideRequest = require("./completeRideRequest");
+const reopenRideRequest = require("./reopenRideRequest");
 
 const getActiveRideRequestsByUser = require("./getActiveRideRequestsByUser");
 const getDriverTrackingByClient = require("./getDriverTrackingByClient");
@@ -22,6 +23,7 @@ module.exports = {
   postRideRequest,
   cancelRideRequest,
   acceptRideRequest,
+  reopenRideRequest,
   completeRideRequest,
 
   getActiveRideRequestsByUser,

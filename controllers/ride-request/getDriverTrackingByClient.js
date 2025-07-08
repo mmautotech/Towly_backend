@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { RideRequest, User } = require("../../models");
 const sendSuccessResponse = require("../../utils/success-response");
+const { request } = require("express");
 
 /**
  * @swagger
@@ -75,8 +76,7 @@ const getDriverTrackingByClient = async (req, res) => {
     }
 
     const acceptedOffer = ride.offers.find(
-      (offer) =>
-        offer._id.toString() === ride.accepted_offer.toString()
+      (offer) => offer._id.toString() === ride.accepted_offer.toString()
     );
 
     if (!acceptedOffer || !acceptedOffer.truck_id) {
@@ -107,6 +107,7 @@ const getDriverTrackingByClient = async (req, res) => {
       dest_location: ride.dest_location,
       status: ride.status,
       offered_price: acceptedOffer.offered_price,
+      request_id: ride._id,
       truck: {
         id: truckUser._id,
         user_name: truckUser.user_name,
@@ -116,8 +117,9 @@ const getDriverTrackingByClient = async (req, res) => {
         ratings_count: vehicleProfile.ratings_count || 0,
         current_location: vehicleProfile.geo_location || null,
         driver_photo:
-          driverProfile.license_selfie?.compressed?.data?.toString("base64") || null,
-      }
+          driverProfile.license_selfie?.compressed?.data?.toString("base64") ||
+          null,
+      },
     };
 
     return sendSuccessResponse(res, "Tracking data retrieved", response);
