@@ -17,11 +17,21 @@ const app = express();
 setupSwagger(app);
 
 // ─── CORS ────────────────────────────────────────────────────────────────
+const allowedOrigins = ['http://localhost:5173', 'https://towly.info'];
+
 const corsOptions = {
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser requests like Postman
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   methods: 'GET,POST,PUT,PATCH,DELETE',
   credentials: true,
 };
+
 app.use(cors(corsOptions));
 
 // ─── Parsers ─────────────────────────────────────────────────────────────
@@ -41,9 +51,9 @@ app.use(errorHandler);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: corsOptions.origin,
-    methods: corsOptions.methods.split(','),
-    credentials: corsOptions.credentials,
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
   },
 });
 
@@ -98,6 +108,7 @@ app.set('io', io);
 
 // ─── Start Server ────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
+
 connectDb()
   .then(() => {
     server.listen(PORT, () => {
