@@ -93,12 +93,12 @@ const getAppliedRide_postedRequests = async (req, res, next) => {
 
       // prepare offer payload
       const offer = {
-        offer_id:             offerDoc._id?.toString(),
-        offered_price:        offerDoc.offered_price,
-        time_to_reach:        offerDoc.time_to_reach,
+        offer_id: offerDoc._id?.toString(),
+        offered_price: offerDoc.offered_price,
+        time_to_reach: offerDoc.time_to_reach,
         client_counter_price: offerDoc.client_counter_price ?? null,
-        createdAt:            offerDoc.createdAt,
-        updatedAt:            offerDoc.updatedAt,
+        createdAt: offerDoc.createdAt,
+        updatedAt: offerDoc.updatedAt,
       };
 
       // user profile
@@ -121,12 +121,12 @@ const getAppliedRide_postedRequests = async (req, res, next) => {
       }
 
       return {
-        request_id:      r._id.toString(),
+        request_id: r._id.toString(),
         origin_location: r.origin_location,
-        dest_location:   r.dest_location,
+        dest_location: r.dest_location,
         vehicle_details: r.vehicle_details,
-        pickup_date:     r.pickup_date,
-        updatedAt:       r.updatedAt,
+        pickup_date: r.pickup_date,
+        updatedAt: r.updatedAt,
         username,
         user_photo,
         offer,

@@ -92,12 +92,12 @@ const getUnappliedRide_postedRequests = async (req, res, next) => {
       }
 
       return {
-        request_id:      r._id.toString(),
+        request_id: r._id.toString(),
         origin_location: r.origin_location,
-        dest_location:   r.dest_location,
+        dest_location: r.dest_location,
         vehicle_details: r.vehicle_details,
-        pickup_date:     r.pickup_date,
-        updatedAt:       r.updatedAt,
+        pickup_date: r.pickup_date,
+        updatedAt: r.updatedAt,
         username,
         user_photo,
       };

@@ -108,47 +108,47 @@ const getOffersForRideRequest = async (req, res, next) => {
     }
 
     const offers = (request.offers || [])
-  .filter((offer) => offer.available === true)
-  .map((offer) => {
-    const truck = offer.truck_id;
-    const truck_profile = truck?.truck_profile;
-    const driver_profile = truck_profile?.driver_profile;
-    const vehicle_profile = truck_profile?.vehicle_profile;
+      .filter((offer) => offer.available === true)
+      .map((offer) => {
+        const truck = offer.truck_id;
+        const truck_profile = truck?.truck_profile;
+        const driver_profile = truck_profile?.driver_profile;
+        const vehicle_profile = truck_profile?.vehicle_profile;
 
-    let name = truck?.user_name || "Unknown";
-    if (vehicle_profile?.make && vehicle_profile?.model) {
-      name = `${vehicle_profile.make} ${vehicle_profile.model}`;
-    } else if (driver_profile?.first_name && driver_profile?.last_name) {
-      name = `${driver_profile.first_name} ${driver_profile.last_name}`;
-    }
+        let name = truck?.user_name || "Unknown";
+        if (vehicle_profile?.make && vehicle_profile?.model) {
+          name = `${vehicle_profile.make} ${vehicle_profile.model}`;
+        } else if (driver_profile?.first_name && driver_profile?.last_name) {
+          name = `${driver_profile.first_name} ${driver_profile.last_name}`;
+        }
 
-    let profile_photo = "";
-    const compImg = vehicle_profile?.vehicle_photo?.compressed;
-    const origImg = vehicle_profile?.vehicle_photo?.original;
+        let profile_photo = "";
+        const compImg = vehicle_profile?.vehicle_photo?.compressed;
+        const origImg = vehicle_profile?.vehicle_photo?.original;
 
-    if (compImg?.data) {
-      profile_photo = formatBase64Image(compImg.data, compImg.contentType);
-    } else if (origImg?.data) {
-      profile_photo = formatBase64Image(origImg.data, origImg.contentType);
-    } else if (driver_profile?.license_selfie?.data) {
-      profile_photo = formatBase64Image(
-        driver_profile.license_selfie.data,
-        driver_profile.license_selfie.contentType
-      );
-    }
+        if (compImg?.data) {
+          profile_photo = formatBase64Image(compImg.data, compImg.contentType);
+        } else if (origImg?.data) {
+          profile_photo = formatBase64Image(origImg.data, origImg.contentType);
+        } else if (driver_profile?.license_selfie?.data) {
+          profile_photo = formatBase64Image(
+            driver_profile.license_selfie.data,
+            driver_profile.license_selfie.contentType
+          );
+        }
 
-    return {
-      offer_id: offer._id.toString(),
-      truck_username: name,
-      truck_photo: profile_photo,
-      truck_location: truck?.geolocation?.coordinates || [0, 0],
-      truck_rating: truck?.rating ?? null,
-      offered_price: offer.offered_price,
-      time_to_reach: offer.time_to_reach,
-      offer_updated_at: offer.updatedAt || null,
-      client_counter_price: offer.client_counter_price ?? null,
-    };
-  });
+        return {
+          offer_id: offer._id.toString(),
+          truck_username: name,
+          truck_photo: profile_photo,
+          truck_location: truck?.geolocation?.coordinates || [0, 0],
+          truck_rating: truck?.rating ?? null,
+          offered_price: offer.offered_price,
+          time_to_reach: offer.time_to_reach,
+          offer_updated_at: offer.updatedAt || null,
+          client_counter_price: offer.client_counter_price ?? null,
+        };
+      });
 
 
 

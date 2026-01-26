@@ -1,5 +1,5 @@
-// controllers/ride-request/createRideRequest.js
 const { RideRequest } = require("../../models");
+const reverseGeocode = require("../../utils/reverseGeocode");
 
 /**
  * @swagger
@@ -21,30 +21,40 @@ const { RideRequest } = require("../../models");
  */
 const createRideRequest = async (req, res, next) => {
   try {
-    // Always start with an empty offers array
+    // Start with empty offers array
     const offers = [];
 
     // Default any missing vehicle fields
     const vehicle = { ...req.body.vehicle_details };
     vehicle.vehicle_category ??= "donot-apply";
-    vehicle.loaded           ??= "Unloaded";
-    // check
-    vehicle.wheels_category  ??= "Wheels Are Rolling";
+    vehicle.loaded ??= "Unloaded";
+    vehicle.wheels_category ??= "Wheels Are Rolling";
 
-    // Build the document payload
-    // Mongoose will cast the string ID into ObjectId automatically
+    // Extract coordinates from request
+    const originCoords = req.body.origin_location.coordinates;
+    const destCoords = req.body.dest_location.coordinates;
+
+    // Reverse geocode if address is not provided
+    const originAddress = req.body.origin_location.address || await reverseGeocode(originCoords);
+    const destAddress = req.body.dest_location.address || await reverseGeocode(destCoords);
+
+    // Build origin and destination objects
+    const origin = { type: "Point", coordinates: originCoords, address: originAddress };
+    const dest = { type: "Point", coordinates: destCoords, address: destAddress };
+
+    // Create RideRequest document
     const newRide = await RideRequest.create({
-      user_id:         req.user.id,             // ← from authenticateToken
-      origin_location: req.body.origin_location,
-      dest_location:   req.body.dest_location,
-      pickup_date:     new Date(req.body.pickup_date),
+      user_id: req.user.id, // from authenticateToken
+      origin_location: origin,
+      dest_location: dest,
+      pickup_date: new Date(req.body.pickup_date),
       vehicle_details: vehicle,
       offers,
     });
 
     return res.status(201).json({
-      success:    true,
-      message:    "Ride request created successfully",
+      success: true,
+      message: "Ride request created successfully",
       request_id: newRide._id.toString(),
     });
   } catch (error) {

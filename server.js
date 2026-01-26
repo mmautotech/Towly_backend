@@ -17,7 +17,7 @@ const app = express();
 setupSwagger(app);
 
 // ─── CORS ────────────────────────────────────────────────────────────────
-const allowedOrigins = ['http://localhost:5173', 'https://towly.info'];
+const allowedOrigins = ['http://localhost:5173', 'https://towly.info', 'http://192.168.18.84:5173'];
 
 const corsOptions = {
   origin: function (origin, callback) {

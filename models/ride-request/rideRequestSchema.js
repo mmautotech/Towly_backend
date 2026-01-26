@@ -1,9 +1,21 @@
-// models/ride-Request/rideRequestSchema.js
-
 const mongoose = require("mongoose");
 const geoPointSchema = require("../user/geoPoint.schema");
-const vehicleSchema   = require("./vehicleSchema");
-const offerSchema     = require("./offerSchema");
+const vehicleSchema = require("./vehicleSchema");
+const offerSchema = require("./offerSchema");
+
+// Extend geoPointSchema to include address
+const geoPointWithAddressSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["Point"],
+    default: "Point",
+  },
+  coordinates: {
+    type: [Number], // [longitude, latitude]
+    required: true,
+  },
+  address: { type: String }, // <-- added address field
+});
 
 const RideRequestSchema = new mongoose.Schema(
   {
@@ -12,11 +24,11 @@ const RideRequestSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    origin_location: geoPointSchema,
-    dest_location:   geoPointSchema,
-    pickup_date:     { type: Date, required: true },
+    origin_location: geoPointWithAddressSchema, // updated
+    dest_location: geoPointWithAddressSchema,   // updated
+    pickup_date: { type: Date, required: true },
     vehicle_details: vehicleSchema,
-    offers:          [offerSchema],
+    offers: [offerSchema],
     accepted_offer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Offer",
@@ -32,14 +44,11 @@ const RideRequestSchema = new mongoose.Schema(
 
 // Geospatial indexes for fast $geoWithin / $near queries
 RideRequestSchema.index({ origin_location: "2dsphere" });
-RideRequestSchema.index({ dest_location:   "2dsphere" });
+RideRequestSchema.index({ dest_location: "2dsphere" });
 
 // PERFORMANCE INDEXES
-// Index by user to speed up lookups of a client’s rides
 RideRequestSchema.index({ user_id: 1 });
-// Index on each offer’s _id for quick sub-document lookups
 RideRequestSchema.index({ "offers._id": 1 });
-// Index on status to quickly filter by ride lifecycle phase
 RideRequestSchema.index({ status: 1 });
 
 RideRequestSchema.pre("validate", function (next) {
