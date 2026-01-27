@@ -25,45 +25,6 @@ const getPlaceAutocomplete = async (input, sessiontoken) => {
 };
 
 /**
- * Geocoding API: converts address -> coordinates
- * @param {string} address
- */
-const geocodeAddress = async (address) => {
-    try {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json`;
-        const params = { address, key: GOOGLE_API_KEY };
-        const { data } = await axios.get(url, { params });
-        if (data.status === "OK") {
-            return data.results[0].geometry.location; // { lat, lng }
-        }
-        return null;
-    } catch (error) {
-        console.error("Geocode API error:", error.message);
-        throw new Error("Failed to geocode address");
-    }
-};
-
-/**
- * Reverse Geocoding API: converts coordinates -> human-readable address
- * @param {number} lat
- * @param {number} lng
- */
-const reverseGeocode = async (lat, lng) => {
-    try {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json`;
-        const params = { latlng: `${lat},${lng}`, key: GOOGLE_API_KEY };
-        const { data } = await axios.get(url, { params });
-        if (data.status === "OK") {
-            return data.results[0].formatted_address;
-        }
-        return null;
-    } catch (error) {
-        console.error("Reverse Geocode API error:", error.message);
-        throw new Error("Failed to reverse geocode coordinates");
-    }
-};
-
-/**
  * Distance Matrix API: calculates distance and ETA between origin & destination
  * @param {object} origin - { lat, lng }
  * @param {object} destination - { lat, lng }
@@ -96,7 +57,5 @@ const getDistanceAndETA = async (origin, destination) => {
 
 module.exports = {
     getPlaceAutocomplete,
-    geocodeAddress,
-    reverseGeocode,
     getDistanceAndETA,
 };

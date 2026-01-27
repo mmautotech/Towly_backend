@@ -1,3 +1,4 @@
+/*
 const axios = require("axios");
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
@@ -6,7 +7,7 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
  * Reverse geocode coordinates to a human-readable address using Google Maps API
  * @param {number[]} coordinates - [longitude, latitude]
  * @returns {Promise<string>} formatted address
- */
+ *
 async function reverseGeocode([lng, lat]) {
     try {
         const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
@@ -31,3 +32,4 @@ async function reverseGeocode([lng, lat]) {
 }
 
 module.exports = reverseGeocode;
+*/
