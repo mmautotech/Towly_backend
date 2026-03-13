@@ -20,4 +20,6 @@ router.use("/notifications", require("./notification"));
 
 router.use("/", require("./message.js"));
 
+router.use("/location", require("./location"));
+
 module.exports = router;
