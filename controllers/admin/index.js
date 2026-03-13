@@ -19,3 +19,12 @@ module.exports = {
 
 
 };
+/*
+PORT=5000
+
+MONGO_URI=mongodb+srv://mmautotechapp_db_user:MmAutoTechApp123321@cluster0.0iohdvp.mongodb.net/Towly_DB?retryWrites=true&w=majority
+
+JWT_SECRET_KEY=a61330be8552f53ab930a0f2198c157b486863da0d3d354760e26766d782e546
+
+
+*/
