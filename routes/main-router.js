@@ -22,4 +22,6 @@ router.use("/", require("./message.js"));
 
 router.use("/location", require("./location"));
 
+router.use("/google", require("./google.routes.js"));
+
 module.exports = router;
