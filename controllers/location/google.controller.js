@@ -17,8 +17,15 @@ exports.searchPlaces = async (req, res) => {
                 params: {
                     input,
                     key: GOOGLE_API_KEY,
-                    components: 'country:gb', // keep restricted to UK only, remove London bias
-                    // Removed location & radius to allow global results within UK
+
+                    // ✅ Hard bias to Pakistan
+                    components: 'country:pk',
+
+                    // ✅ Strong Lahore focus
+                    location: '31.5204,74.3587',
+
+                    // ✅ Tight radius (VERY IMPORTANT)
+                    radius: 20000, // 20km
                 },
             }
         );
