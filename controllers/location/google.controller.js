@@ -2,7 +2,12 @@ const axios = require('axios');
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// 🔍 Autocomplete (no location restriction)
+// London coordinates
+const LONDON_LAT = 51.5074;
+const LONDON_LNG = -0.1278;
+const LONDON_RADIUS = 50000; // in meters (50 km)
+
+// 🔍 Autocomplete (restricted to London, UK)
 exports.searchPlaces = async (req, res) => {
     try {
         const { input } = req.query;
@@ -17,15 +22,9 @@ exports.searchPlaces = async (req, res) => {
                 params: {
                     input,
                     key: GOOGLE_API_KEY,
-
-                    // ✅ Hard bias to Pakistan
-                    components: 'country:pk',
-
-                    // ✅ Strong Lahore focus
-                    location: '31.5204,74.3587',
-
-                    // ✅ Tight radius (VERY IMPORTANT)
-                    radius: 20000, // 20km
+                    components: 'country:gb', // restrict to UK
+                    location: `${LONDON_LAT},${LONDON_LNG}`, // bias to London
+                    radius: LONDON_RADIUS, // 50km radius
                 },
             }
         );
