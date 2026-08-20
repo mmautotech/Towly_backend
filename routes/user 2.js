@@ -14,8 +14,5 @@ router.get("/vehicle/location/:driver_id", authenticateToken, user.getLocationVe
 router.get("/settings", authenticateToken, user.getSettings);
 router.put("/settings", authenticateToken, user.updateSettings);
 
-// Permanently delete the authenticated user's account (App Store 5.1.1(v))
-router.delete("/delete-account", authenticateToken, user.deleteAccount);
-
 
 module.exports = router;

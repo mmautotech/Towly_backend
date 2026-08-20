@@ -10,8 +10,6 @@ const getSettings = require("./getSettings");
 
 const getLocationVehicle = require("./getLocationVehicle");
 
-const deleteAccount = require("./deleteAccount");
-
 module.exports = {
   getBasicInfo,
   UpdateRating,
@@ -19,5 +17,4 @@ module.exports = {
   getSettings,
   updateSettings,
   getLocationVehicle,
-  deleteAccount,
 };
